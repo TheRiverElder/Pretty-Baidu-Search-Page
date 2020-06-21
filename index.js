@@ -5,7 +5,6 @@
 // @version      0.1
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
-// @run-at       document-end
 // @author       TheRiverElder
 // @compatible   chrome
 // @include      *//www.baidu.com/*
