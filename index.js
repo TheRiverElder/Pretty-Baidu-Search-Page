@@ -116,6 +116,11 @@ GM_addStyle(`
         background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(5px);
         border-radius: .5em;
+        transition: background 100ms;
+    }
+    .result:hover, .result-op:hover {
+        background: rgba(255, 255, 255, 0.9);
+        transition: background 100ms;
     }
     .result img, .result-op img {
         border-radius: .2em;
@@ -128,7 +133,6 @@ GM_addStyle(`
         width: auto;
         border: none;
         box-shadow: none;
-        overflow: auto;
     }
 
     #page {
