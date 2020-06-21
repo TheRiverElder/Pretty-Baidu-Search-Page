@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name         百度页面双列美化
 // @name:en      Pretty Baidu Search Page
-// @namespace    https://theriverelder.github.io/
+// @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
 // @version      0.1
-// @description  夜间模式的双列百度搜索页面
+// @description  美化百度搜索页面，提供自动逸图片背景、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白
 // @run-at       document-end
 // @author       TheRiverElder
-// @match        *//www.baidu.com/*
 // @include      *//www.baidu.com/*
 // @grant        GM_addStyle
 // @grant        GM_getValue
