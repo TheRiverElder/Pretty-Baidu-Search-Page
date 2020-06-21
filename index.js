@@ -3,9 +3,11 @@
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
 // @version      0.1
-// @description  美化百度搜索页面，提供自动逸图片背景、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白
+// @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
+// @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @run-at       document-end
 // @author       TheRiverElder
+// @compatible   chrome
 // @include      *//www.baidu.com/*
 // @grant        GM_addStyle
 // @grant        GM_getValue
@@ -174,12 +176,19 @@ GM_addStyle(`
     }
     .settings > * {
         width: 80%;
+        margin: em 0;
     }
     .settings > .title {
         text-align: center;
         letter-spacing: .5em;
         font-size: 2em;
         font-weight: bold;
+    }
+    .settings > .hint {
+        text-align: center;
+        bord-break: break-all;
+        font-size: 1em;
+        color: #808080
     }
     .settings > textarea {
         resize: none;
@@ -240,9 +249,6 @@ GM_addStyle(`
         box-sizing: border-box;
         display: none;
     }
-    .btn-open-settings {
-        
-    }
 `);
 
 (function() {
@@ -293,6 +299,10 @@ GM_addStyle(`
     const settings = Object.assign(document.createElement('div'), {className: 'settings'});
     // 标题
     const title = Object.assign(document.createElement('p'), {className: 'title', innerText: '背景设置'});
+    // 提示
+    const hint = Object.assign(document.createElement('p'), {className: 'hint', 
+        innerText: '先选择颜色或者文件，之后点击“使用该颜色”或者“使用该图片”，之后会看见文本框中的样式代码发生改变，此时点击“确定”以确认更改，否则点击“取消”以返回。'
+    });
     // 背景样式预览
     const txtBgPreview = Object.assign(document.createElement('textarea'), {className: 'bg-preview'});
     // 颜色输入
@@ -344,13 +354,14 @@ GM_addStyle(`
 
     overlay.appendChild(settings);
     settings.appendChild(title);
+    settings.appendChild(hint);
     settings.appendChild(txtBgPreview);
     settings.appendChild(divColor);
     settings.appendChild(divFile);
     settings.appendChild(imgFile);
     settings.appendChild(divButtons);
     document.getElementsByTagName('body')[0].appendChild(overlay);
-    
+
     // 在页面右上角的连接处，增加一个用于打开设置面板的链接（实际上是仅仅是按钮的功能，但是使用<a>可以保持原有样式）
     const btnSettings = Object.assign(document.createElement('a'), {innerText: '设置背景', className: 'btn-open-settings'});
     btnSettings.addEventListener('click', () => {
