@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         百度页面双列美化
+// @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
 // @version      0.1
@@ -248,6 +248,7 @@ GM_addStyle(`
 (function() {
     'use strict';
 
+    // 保存先前设置的背景的键
     const BG_KEY = 'baidu-search-background';
 
     // 移除冗杂内容
@@ -263,29 +264,29 @@ GM_addStyle(`
 
     // 获取相关DOM
     const wrapper = document.getElementById('wrapper'); // 整个页面
-    const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
+    // const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
     const u = document.getElementById('u'); // 页眉处的链接
-    const tab = document.getElementById('s_tab'); // 图片、文库等标签
-    const container = document.getElementById('container'); // 主要内容：搜索结果与页码
+    // const tab = document.getElementById('s_tab'); // 图片、文库等标签
+    // const container = document.getElementById('container'); // 主要内容：搜索结果与页码
     const content = document.getElementById('content_left'); // 搜索结果列表
     const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
-    const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
+    // const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
 
-    // 再次去除冗杂内容包括广告
+    // 清空搜索结果中的所有内容，包括广告等，真正的搜索结果会在之后注入
     [...content.childNodes].forEach(e => e.remove());
 
-    // 双列排列搜索结果
-    const left = document.createElement('div');
-    const right = document.createElement('div');
-    content.appendChild(left);
-    content.appendChild(right);
-    left.className = "result_column";
-    right.className = "result_column";
+    // 双列排布搜索结果
+    const left = Object.assign(document.createElement('div'), {className: 'result_column'});
+    const right = Object.assign(document.createElement('div'), {className: 'result_column'});
+    // 重新将实际的搜索结果分两列填充至容器
     for (let result of results) {
         (left.children.length <= right.children.length ? left : right).appendChild(result);
     }
+    content.appendChild(left);
+    content.appendChild(right);
 
-    // 设置页面
+    // 设置页面，当前只能设置背景内容
+    // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
     // 浮层
     const overlay = Object.assign(document.createElement('div'), {className: 'overlay'});
     // 主要面板
@@ -303,7 +304,7 @@ GM_addStyle(`
     divColor.appendChild(txtColor);
     divColor.appendChild(iptColor);
     divColor.appendChild(btnColor);
-    // 文件输入
+    // 图片输入
     const divFile = Object.assign(document.createElement('div'), {className: 'triponent'});
     const txtFile = Object.assign(document.createElement('span'), {innerText: '图片'});
     const iptFile = Object.assign(document.createElement('input'), {type: 'file', accept: 'image/*', className: 'bg-input'});
@@ -318,7 +319,7 @@ GM_addStyle(`
         };
         reader.readAsDataURL(iptFile.files[0]);
     });
-    btnFile.addEventListener('click', () => txtBgPreview.innerText = `url('${imgFile.src}')`);
+    btnFile.addEventListener('click', () => txtBgPreview.innerText = `url('${imgFile.src}')`); // 由于使用的是DataURL，故会产生些许卡顿
     divFile.appendChild(txtFile);
     divFile.appendChild(iptFile);
     divFile.appendChild(btnFile);
@@ -328,10 +329,10 @@ GM_addStyle(`
     // 确认按钮
     const btnConfirm = Object.assign(document.createElement('button'), {innerText: '确定'});
     btnConfirm.addEventListener('click', () => {
+        overlay.style.visibility = 'collapse';
         const bg = txtBgPreview.value;
         setBackground(bg);
         GM_setValue(BG_KEY, bg);
-        overlay.style.visibility = 'collapse';
     });
     // 取消按钮
     const btnCancel = Object.assign(document.createElement('button'), {innerText: '取消'});
@@ -349,17 +350,20 @@ GM_addStyle(`
     settings.appendChild(imgFile);
     settings.appendChild(divButtons);
     document.getElementsByTagName('body')[0].appendChild(overlay);
-    // 打开设置面板的按钮
+    
+    // 在页面右上角的连接处，增加一个用于打开设置面板的链接（实际上是仅仅是按钮的功能，但是使用<a>可以保持原有样式）
     const btnSettings = Object.assign(document.createElement('a'), {innerText: '设置背景', className: 'btn-open-settings'});
     btnSettings.addEventListener('click', () => {
         overlay.style.visibility = 'visible';
     });
     u.appendChild(btnSettings);
 
-    // 初始化
+    // 初始化，读取先前设置的背景
     setBackground(GM_getValue(BG_KEY, '#001133'));
 
+    // 设置背景，如果是使用DataUrl可能会导致些许卡顿
     function setBackground(bg) {
+        // 由于在设置新的背景后，background-*的样式会失效，故需要重新设置
         wrapper.style = `
         background: ${bg};
         background-size: cover;
