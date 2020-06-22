@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.0.3
+// @version      1.1.0
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -99,6 +99,7 @@ GM_addStyle(`
         border-box;
         display: flex;
         flex-direction: row;
+        align-items: flex-start;
     }
     .result_column {
         flex: 1;
@@ -290,18 +291,49 @@ GM_addStyle(`
     const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
     // const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
 
-    // 清空搜索结果中的所有内容，包括广告等，真正的搜索结果会在之后注入
-    [...content.childNodes].forEach(e => e.remove());
+    // 封杀所有冗杂内容
+    [...content.childNodes].forEach(node => node.remove())
+
 
     // 双列排布搜索结果
     const left = Object.assign(document.createElement('div'), {className: 'result_column'});
     const right = Object.assign(document.createElement('div'), {className: 'result_column'});
-    // 重新将实际的搜索结果分两列填充至容器
-    for (let result of results) {
-        (left.children.length <= right.children.length ? left : right).appendChild(result);
-    }
     content.appendChild(left);
     content.appendChild(right);
+    // 重新将实际的搜索结果分两列填充至容器
+    for (let result of results) {
+        appendResult(result);
+    }
+    
+    // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
+    function appendResult(elem) {
+        (left.clientHeight <= right.clientHeight ? left : right).appendChild(elem);
+    }
+
+    // 监听新的结果或者广告的添加，Sky Killed 度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
+    if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver
+        const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
+            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                [...mutation.addedNodes].forEach(node => {
+                    node.remove();
+                    if (node.classList.contains('result') || node.classList.contains('result-op')) {
+                        appendResult(node);
+                    }
+                });
+            }
+        }));
+        resultListOvserver.observe(content, {childList: true});
+    } else { // 否则就使用旧的Mutation Events API
+        content.addEventListener('DOMNodeInserted', event => {
+            if (event.relatedNode === content) {
+                const target = event.target;
+                target.remove();
+                if (target.classList.contains('result') || target.classList.contains('result-op')) {
+                    appendResult(event.target);
+                }
+            }
+        });
+    }
 
     // 设置页面，当前只能设置背景内容
     // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
