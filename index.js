@@ -262,6 +262,15 @@ GM_addStyle(`
         box-sizing: border-box;
         display: none;
     }
+
+    #head, #s_tab, #foot, #container {
+        opacity: 1;
+        transition: opacity 200ms;
+    }
+    #head.hidden, #s_tab.hidden, #foot.hidden, #container.hidden {
+        opacity: 0;
+        transition: opacity 200ms;
+    }
 `);
 
 (function() {
@@ -283,17 +292,16 @@ GM_addStyle(`
 
     // 获取相关DOM
     const wrapper = document.getElementById('wrapper'); // 整个页面
-    // const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
+    const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
     const u = document.getElementById('u'); // 页眉处的链接
-    // const tab = document.getElementById('s_tab'); // 图片、文库等标签
-    // const container = document.getElementById('container'); // 主要内容：搜索结果与页码
+    const tab = document.getElementById('s_tab'); // 图片、文库等标签
+    const container = document.getElementById('container'); // 主要内容：搜索结果与页码
     const content = document.getElementById('content_left'); // 搜索结果列表
     const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
-    // const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
+    const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
 
     // 封杀所有冗杂内容
     [...content.childNodes].forEach(node => node.remove())
-
 
     // 双列排布搜索结果
     const left = Object.assign(document.createElement('div'), {className: 'result_column'});
@@ -308,7 +316,15 @@ GM_addStyle(`
     // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
     function appendResult(elem) {
         (left.clientHeight <= right.clientHeight ? left : right).appendChild(elem);
+        elem.addEventListener('dblclick', event => event.stopPropagation());
     }
+
+    // 双击隐藏所有组件并显示背景
+    let showBg = false;
+    container.addEventListener('dblclick', () => {
+        showBg = !showBg;
+        [head, tab, foot, container].forEach(showBg ? (e => e.classList.remove('hidden')) : (e => e.classList.add('hidden')));
+    });
 
     // 监听新的结果或者广告的添加，Sky Killed 度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
     if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver
