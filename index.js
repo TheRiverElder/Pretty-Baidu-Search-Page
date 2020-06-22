@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.1.0
+// @version      1.1.1
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -316,14 +316,20 @@ GM_addStyle(`
     // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
     function appendResult(elem) {
         (left.clientHeight <= right.clientHeight ? left : right).appendChild(elem);
+        // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
         elem.addEventListener('dblclick', event => event.stopPropagation());
     }
 
-    // 双击隐藏所有组件并显示背景
+    // 双击隐藏所有元素并显示背景
     let showBg = false;
     container.addEventListener('dblclick', () => {
-        showBg = !showBg;
+        showBg = true;
         [head, tab, foot, container].forEach(showBg ? (e => e.classList.remove('hidden')) : (e => e.classList.add('hidden')));
+    });
+    // 在任意地方单击以重现元素
+    container.addEventListener('click', () => {
+        showBg = false;
+        [head, tab, foot, container].forEach(e => e.classList.remove('hidden'));
     });
 
     // 监听新的结果或者广告的添加，Sky Killed 度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
