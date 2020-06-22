@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.0.1
+// @version      1.0.2
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -373,7 +373,7 @@ GM_addStyle(`
     });
     // 取消按钮
     const btnCancel = Object.assign(document.createElement('button'), {innerText: '取消'});
-    btnConfirm.addEventListener('click', () => {
+    btnCancel.addEventListener('click', () => {
         overlay.style.visibility = 'collapse';
     });
     divButtons.appendChild(btnConfirm);
@@ -394,6 +394,7 @@ GM_addStyle(`
     const btnSettings = Object.assign(document.createElement('a'), {innerText: '设置背景', className: 'btn-open-settings'});
     btnSettings.addEventListener('click', () => {
         overlay.style.visibility = 'visible';
+        txtBgPreview.innerText = GM_getValue(BG_KEY, '#001133');
     });
     u.appendChild(btnSettings);
 
