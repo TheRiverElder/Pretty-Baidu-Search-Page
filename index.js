@@ -322,14 +322,18 @@ GM_addStyle(`
 
     // 双击隐藏所有元素并显示背景
     let showBg = false;
-    container.addEventListener('dblclick', () => {
+    container.addEventListener('dblclick', event => {
         showBg = true;
         [head, tab, foot, container].forEach(showBg ? (e => e.classList.remove('hidden')) : (e => e.classList.add('hidden')));
+        event.stopPropagation();
     });
+    container.addEventListener('click', event => event.stopPropagation());
     // 在任意地方单击以重现元素
-    container.addEventListener('click', () => {
-        showBg = false;
-        [head, tab, foot, container].forEach(e => e.classList.remove('hidden'));
+    wrapper.addEventListener('click', () => {
+        if (showBg) {
+            showBg = false;
+            [head, tab, foot, container].forEach(e => e.classList.remove('hidden'));
+        }
     });
 
     // 监听新的结果或者广告的添加，Sky Killed 度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
