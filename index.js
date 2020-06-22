@@ -6,6 +6,7 @@
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
+// @icon         https://theriverelder.github.io/assets/river_icon_dark.ico
 // @compatible   chrome
 // @include      *//www.baidu.com/*
 // @grant        GM_addStyle
@@ -179,9 +180,10 @@ GM_addStyle(`
     }
     .settings > * {
         width: 80%;
-        margin: em 0;
+        margin: .5em 0;
     }
     .settings > .title {
+        margin: .5em 0;
         text-align: center;
         letter-spacing: .5em;
         font-size: 2em;
@@ -190,8 +192,8 @@ GM_addStyle(`
     .settings > .hint {
         text-align: center;
         bord-break: break-all;
-        font-size: 1em;
-        color: #808080
+        font-size: .8em;
+        color: #404040
     }
     .settings > textarea {
         resize: none;
@@ -201,7 +203,6 @@ GM_addStyle(`
         outline: none;
     }
     .settings > .triponent {
-        margin: 0;
         height: 2em;
         box-sizing: border-box;
         border: 1px solid #808080;
@@ -232,10 +233,9 @@ GM_addStyle(`
         border-bottom-left-radius: 0;
     }
     .settings .buttons {
-        margin: 0;
         display: flex;
         flex-direction: row;
-        justify-content: center;
+        justify-content: space-evenly;
     }
     .settings button {
         margin: 0;
@@ -245,7 +245,16 @@ GM_addStyle(`
         border-radius: 1.5em;
         outline: none;
     }
+    .bg-img-preview-wrapper {
+        flex: 1;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
     .bg-img-preview {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: 50% 50%;
         border: .1em solid #808080;
         border-radius: .5em;
         padding: .5em;
@@ -304,7 +313,10 @@ GM_addStyle(`
     const title = Object.assign(document.createElement('p'), {className: 'title', innerText: '背景设置'});
     // 提示
     const hint = Object.assign(document.createElement('p'), {className: 'hint', 
-        innerText: '先选择颜色或者文件，之后点击“使用该颜色”或者“使用该图片”，之后会看见文本框中的样式代码发生改变，此时点击“确定”以确认更改，否则点击“取消”以返回。'
+        innerText: `先选择颜色或者文件，之后点击“使用该颜色”或者“使用该图片”，
+        之后会看见文本框中的样式代码发生改变，
+        此时点击“确定”以确认更改，否则点击“取消”以返回。
+        目前URL不支持预览，但是可以使用（图片载入耗时取决于网络环境）`
     });
     // 背景样式预览
     const txtBgPreview = Object.assign(document.createElement('textarea'), {className: 'bg-preview'});
@@ -322,7 +334,9 @@ GM_addStyle(`
     const txtFile = Object.assign(document.createElement('span'), {innerText: '图片'});
     const iptFile = Object.assign(document.createElement('input'), {type: 'file', accept: 'image/*', className: 'bg-input'});
     const btnFile = Object.assign(document.createElement('button'), {innerText: '使用该图片'});
-    const imgFile = Object.assign(document.createElement('img'), {className: 'bg-img-preview'});
+    // 图片预览
+    const imgFileWrapper = Object.assign(document.createElement('div'), {className: 'bg-img-preview-wrapper'});
+    const imgFile = Object.assign(document.createElement('img'), {className: 'bg-img-preview', alt: '背景预览'});
     iptFile.addEventListener('change', () => {
         if (!iptFile.files.length) return;
         const reader = new FileReader();
@@ -336,6 +350,16 @@ GM_addStyle(`
     divFile.appendChild(txtFile);
     divFile.appendChild(iptFile);
     divFile.appendChild(btnFile);
+    imgFileWrapper.appendChild(imgFile);
+    // 图片URL输入
+    const divUrl = Object.assign(document.createElement('div'), {className: 'triponent'});
+    const txtUrl = Object.assign(document.createElement('span'), {innerText: '图片URL'});
+    const iptUrl = Object.assign(document.createElement('input'), {type: 'url', className: 'bg-input'});
+    const btnUrl = Object.assign(document.createElement('button'), {innerText: '使用该图片URL'});
+    divUrl.addEventListener('click', () => txtBgPreview.innerText = `url('${iptUrl.value}')`);
+    divUrl.appendChild(txtUrl);
+    divUrl.appendChild(iptUrl);
+    divUrl.appendChild(btnUrl);
 
     // 按钮
     const divButtons = Object.assign(document.createElement('div'), {className: 'buttons'});
@@ -361,7 +385,8 @@ GM_addStyle(`
     settings.appendChild(txtBgPreview);
     settings.appendChild(divColor);
     settings.appendChild(divFile);
-    settings.appendChild(imgFile);
+    settings.appendChild(imgFileWrapper);
+    settings.appendChild(divUrl);
     settings.appendChild(divButtons);
     document.getElementsByTagName('body')[0].appendChild(overlay);
 
