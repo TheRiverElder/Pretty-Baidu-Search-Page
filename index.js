@@ -43,7 +43,9 @@ GM_addStyle(`
         border-radius: 0;
     }
     /* 搜索建议表 */
-    .wrapper_new #form .bdsug-new ul, .wrapper_new .fix-head.s_down #form .bdsug-new {
+    .wrapper_new #form .bdsug-new ul, 
+    .wrapper_new .fix-head.s_down #form .bdsug-new,
+    .wrapper_new #form .bdsug-new {
         width: 100%;
         margin: 0;
         padding: 0;
@@ -75,7 +77,7 @@ GM_addStyle(`
         right: 0;
     }
     /* 搜索建议列表的反馈栏 */
-    .wrapper_new .bdsug-new .bdsug-feedback-wrap, .wrapper_new #form .bdsug-new {
+    .wrapper_new .bdsug-new .bdsug-feedback-wrap {
         margin: 0;
         padding-top: 5px;
         background: #F5F5F6;
