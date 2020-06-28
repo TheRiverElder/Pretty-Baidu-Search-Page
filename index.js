@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.1.2
+// @version      1.2.2
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -24,9 +24,11 @@ GM_addStyle(`
         flex-direction: row;
         justify-content: center;
     }
-    .bdsug {
+    /* 搜索建议列表外层 */
+    .bdsug, .wrapper_new.wrapper_s #form .bdsug-new {
         width: 100%;
         border: none;
+        box-sizing: border-box;
         background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(2px);
         border-bottom-left-radius: 1.5em;
@@ -34,19 +36,46 @@ GM_addStyle(`
         box-shadow: none;
         overflow: hidden;
     }
-    .bdsug li {
+    .busug input, .busug-new input, .wrapper_new .s_btn_wr .s_btn {
+        border-radius: 0;
+    }
+    /* 搜索建议表 */
+    .wrapper_new #form .bdsug-new ul {
         width: 100%;
         margin: 0;
-        padding: .5em 0;
+        padding: 0;
+    }
+    /* 普通的搜索建议 */
+    .wrapper_new.wrapper_s #form .bdsug-new ul li {
+        width: 100%;
+        margin: 0;
+        padding: .5em .5em;
         padding-left: 1em;
         box-sizing: border-box;
-        transition: all 100ms;
+        transition: padding-left 100ms;
     }
-    .bdsug li.bdsug-s {
+    /* 被选中的搜索建议，注意被选中不仅仅是鼠标悬停，通过上下键所选中的也在其中 */
+    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s {
         padding-left: 2em;
         background-color: rgba(255, 255, 255, 0.5);
-        transition: all 100ms;
+        transition: padding-left 100ms;
+        display: flex;
+        align-items: center;
     }
+    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s span {
+        flex: 1;
+    }
+    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s .bdsug-store-del  {
+        position: relative;
+        right: 0;
+    }
+    /* 搜索建议列表的反馈栏 */
+    .wrapper_new .bdsug-new .bdsug-feedback-wrap {
+        margin: 0;
+        padding-top: 5px;
+        background: #F5F5F6;
+    }
+
     .bdsug-feedback-wrap {
         height: 2em;
     }
@@ -57,13 +86,13 @@ GM_addStyle(`
         float: none;
     }
     #form .s_ipt_wr {
-        border-top-left-radius: 1.5em;
-        border-bottom-left-radius: 1.5em;
-        padding-left: 1.5em;a
+        border-top-left-radius: 2em;
+        border-bottom-left-radius: 2em;
+        padding-left: 1.5em;
     }
     #form .s_btn_wr {
-        border-top-right-radius: 1.5em;
-        border-bottom-right-radius: 1.5em;
+        border-top-right-radius: 2em;
+        border-bottom-right-radius: 2em;
         overflow: hidden;
     }
     #form .s_ipt_wr.iptfocus {
@@ -73,7 +102,9 @@ GM_addStyle(`
         border-bottom-right-radius: 0;
     }
 
-
+    .wrapper_new #head.fix-head .s_form {
+        height: auto;
+    }
     #wrapper {
         backgroun-color: #001133;
         background-size: cover;
@@ -82,8 +113,16 @@ GM_addStyle(`
         background-attachment: fixed;
     }
     #s_tab {
-        background: rgba(255, 255, 255, 0.8);
+        background: #F5F5F680;
         backdrop-filter: blur(5px);
+    }
+    /* 同关键词链接，例如文库、百科之类的 */
+    .wrapper_new #s_tab .s-tab-item, .wrapper_new #s_tab .s-tab-item:before {
+        transition: color 100ms;
+    }
+    .wrapper_new #s_tab .s-tab-item:hover, .wrapper_new #s_tab .s-tab-item:hover:before {
+        color: #FFFFFF;
+        transition: color 100ms;
     }
     #container {
         width: 100%;
@@ -136,7 +175,8 @@ GM_addStyle(`
         box-shadow: none;
     }
 
-    #page {
+    #page, .wrapper_new .container_new~#page {
+        background-color: transparent;
         padding: 0;
         display: flex;
         flex-direction: row;
@@ -148,7 +188,6 @@ GM_addStyle(`
         background: transparent;
     }
     #page .pc, #page .n {
-        border-radius: 1.5em;
         background: rgba(255, 255, 255, 0.8);
     }
     #page strong .fk, #page .fk {
