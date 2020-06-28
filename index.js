@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.2.2
+// @version      1.2.3
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -25,7 +25,10 @@ GM_addStyle(`
         justify-content: center;
     }
     /* 搜索建议列表外层 */
-    .bdsug, .wrapper_new.wrapper_s #form .bdsug-new {
+    .bdsug, 
+    .wrapper_new.wrapper_s #form .bdsug-new, 
+    .wrapper_new .wrapper_new #form .bdsug-new ul, 
+    .wrapper_new .fix-head.s_down #form .bdsug-new {
         width: 100%;
         border: none;
         box-sizing: border-box;
@@ -40,13 +43,14 @@ GM_addStyle(`
         border-radius: 0;
     }
     /* 搜索建议表 */
-    .wrapper_new #form .bdsug-new ul {
+    .wrapper_new #form .bdsug-new ul, .wrapper_new .fix-head.s_down #form .bdsug-new {
         width: 100%;
         margin: 0;
         padding: 0;
     }
     /* 普通的搜索建议 */
-    .wrapper_new.wrapper_s #form .bdsug-new ul li {
+    .wrapper_new.wrapper_s #form .bdsug-new ul li, 
+    .wrapper_new #form .bdsug-new ul li {
         width: 100%;
         margin: 0;
         padding: .5em .5em;
@@ -55,22 +59,23 @@ GM_addStyle(`
         transition: padding-left 100ms;
     }
     /* 被选中的搜索建议，注意被选中不仅仅是鼠标悬停，通过上下键所选中的也在其中 */
-    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s {
+    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s, 
+    .wrapper_new #form .bdsug-new .bdsug-s {
         padding-left: 2em;
         background-color: rgba(255, 255, 255, 0.5);
         transition: padding-left 100ms;
         display: flex;
         align-items: center;
     }
-    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s span {
+    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s span, .wrapper_new #form .bdsug-new ul li.bdsug-s span {
         flex: 1;
     }
-    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s .bdsug-store-del  {
+    .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s .bdsug-store-del.wrapper_new #form .bdsug-new ul li.bdsug-s .bdsug-store-del  {
         position: relative;
         right: 0;
     }
     /* 搜索建议列表的反馈栏 */
-    .wrapper_new .bdsug-new .bdsug-feedback-wrap {
+    .wrapper_new .bdsug-new .bdsug-feedback-wrap, .wrapper_new #form .bdsug-new {
         margin: 0;
         padding-top: 5px;
         background: #F5F5F6;
