@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.2.3
+// @version      1.3.0
 // @description  美化百度搜索页面，去除广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed the ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -317,6 +317,13 @@ GM_addStyle(`
         opacity: 0;
         transition: opacity 200ms;
     }
+
+    .setting-dropdown {
+        display: none;
+        right: 200px;
+        top: 48px;
+        user-select: none;
+    }
 `);
 
 (function() {
@@ -324,6 +331,8 @@ GM_addStyle(`
 
     // 保存先前设置的背景的键
     const BG_KEY = 'baidu-search-background';
+    // 保存先前设置的导航栏可见性的键
+    const TV_KEY = 'baidu-search-tab-visibility';
 
     // 移除冗杂内容
     [
@@ -492,17 +501,35 @@ GM_addStyle(`
     settings.appendChild(divUrl);
     settings.appendChild(divButtons);
     document.getElementsByTagName('body')[0].appendChild(overlay);
+    // 设置下拉菜单
+    const settingsDropdown = Object.assign(document.createElement('div'), {className: 'usermenu setting-dropdown', 
+        onmouseleave: () => settingsDropdown.style.display = 'none'
+    });
+    settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '设置背景', onclick: openSettingsPanel}));
+    settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '开关导航', onclick: toggleTab}));
+    // 在页面右上角的连接处，增加一个设置菜单的<a>标签（实际上是仅仅是按钮的功能，但是使用<a>可以保持原有样式）
+    const btnSettings = Object.assign(document.createElement('a'), {innerText: '美化设置', className: 'btn-open-settings',
+        onmouseover: () => settingsDropdown.style.display = 'block',
+    });
+    if (u.insertBefore) {
+        u.insertBefore(btnSettings, u.children[0]);
+    } else {
+        u.appendChild(btnSettings);
+    }
+    u.appendChild(settingsDropdown);
 
-    // 在页面右上角的连接处，增加一个用于打开设置面板的链接（实际上是仅仅是按钮的功能，但是使用<a>可以保持原有样式）
-    const btnSettings = Object.assign(document.createElement('a'), {innerText: '设置背景', className: 'btn-open-settings'});
-    btnSettings.addEventListener('click', () => {
+    // 打开背景设置界面
+    function openSettingsPanel() {
         overlay.style.visibility = 'visible';
         txtBgPreview.innerText = GM_getValue(BG_KEY, '#001133');
-    });
-    u.appendChild(btnSettings);
+    }
 
-    // 初始化，读取先前设置的背景
-    setBackground(GM_getValue(BG_KEY, '#001133'));
+    // 开关导航栏
+    function toggleTab() {
+        const newVisibility = tab.style.visibility === 'hidden' ? 'visible' : 'hidden';
+        setTabVisibility(newVisibility);
+        GM_setValue(TV_KEY, newVisibility);
+    }
 
     // 设置背景，如果是使用DataUrl可能会导致些许卡顿
     function setBackground(bg) {
@@ -514,4 +541,16 @@ GM_addStyle(`
         background-position: center;
         background-attachment: fixed;`;
     }
+
+    // 设置导航栏可见性
+    function setTabVisibility(visibility) {
+        tab.style = `
+        visibility: ${visibility};
+        height: ${visibility === 'hidden' ? '0' : 'auto'};`;
+    }
+
+    // 初始化，读取先前设置的背景与导航栏可见性
+    setBackground(GM_getValue(BG_KEY, '#001133'));
+    setTabVisibility(GM_getValue(TV_KEY, 'visibile'));
+
 })();
