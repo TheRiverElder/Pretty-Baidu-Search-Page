@@ -394,14 +394,11 @@ GM_addStyle(globalStyle);
             if (elem.classList.contains('result-op') && column.insertBefore) {
                 let firstNormalResult = column.firstChild;
                 for (let e of column.childNodes) {
-                    console.log('e', e);
                     if (!e.classList.contains('result-op')) {
-                        console.log('break');
                         firstNormalResult = e;
                         break;
                     }
                 }
-                console.log('firstNormalResult', firstNormalResult);
                 column.insertBefore(elem, firstNormalResult);
             } else {
                 column.appendChild(elem);
