@@ -334,6 +334,25 @@ GM_addStyle(globalStyle);
     // 保存先前设置的导航栏可见性的键
     const TV_KEY = 'baidu-search-tab-visibility';
 
+
+    
+
+    // 开关导航栏
+    function toggleTab() {
+        const newVisibility = tab.style.visibility === 'hidden' ? 'visible' : 'hidden';
+        setTabVisibility(newVisibility);
+        GM_setValue(TV_KEY, newVisibility);
+    }
+    
+    // 设置导航栏可见性
+    function setTabVisibility(visibility) {
+        const tab = document.getElementById('s_tab'); // 图片、文库等标签
+        tab.style = `
+        visibility: ${visibility};
+        height: ${visibility === 'hidden' ? '0' : 'auto'};`;
+    }
+
+
     // 重新进行刷新
     function refreshContent() {
 
@@ -366,12 +385,26 @@ GM_addStyle(globalStyle);
         
         // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
         function appendResult(elem) {
-            const leftHeight = left.clientHeight;
-            const rightHeight = right.clientHeight;
-            if (leftHeight === rightHeight) {
-                (left.childNodes.length <= right.childNodes.length ? left : right).appendChild(elem);
+            let column;
+            if (left.clientHeight === right.clientHeight) {
+                column = left.childNodes.length <= right.childNodes.length ? left : right;
             } else {
-                (leftHeight <= rightHeight ? left : right).appendChild(elem);
+                column = left.clientHeight <= right.clientHeight ? left : right;
+            }
+            if (elem.classList.contains('result-op') && column.insertBefore) {
+                let firstNormalResult = column.firstChild;
+                for (let e of column.childNodes) {
+                    console.log('e', e);
+                    if (!e.classList.contains('result-op')) {
+                        console.log('break');
+                        firstNormalResult = e;
+                        break;
+                    }
+                }
+                console.log('firstNormalResult', firstNormalResult);
+                column.insertBefore(elem, firstNormalResult);
+            } else {
+                column.appendChild(elem);
             }
             // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
             elem.addEventListener('dblclick', event => event.stopPropagation());
@@ -427,6 +460,8 @@ GM_addStyle(globalStyle);
 
         const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
         const u = document.getElementById('u'); // 页眉处的链接
+
+        
 
         // 设置页面，当前只能设置背景内容
         // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
@@ -536,13 +571,6 @@ GM_addStyle(globalStyle);
             overlay.style.visibility = 'visible';
             txtBgPreview.innerText = GM_getValue(BG_KEY, '#001133');
         }
-
-        // 开关导航栏
-        function toggleTab() {
-            const newVisibility = tab.style.visibility === 'hidden' ? 'visible' : 'hidden';
-            setTabVisibility(newVisibility);
-            GM_setValue(TV_KEY, newVisibility);
-        }
     }
 
     // 设置背景，如果是使用DataUrl可能会导致些许卡顿
@@ -554,14 +582,6 @@ GM_addStyle(globalStyle);
         background-repeat: no-repeat;
         background-position: center;
         background-attachment: fixed;`;
-    }
-
-    // 设置导航栏可见性
-    function setTabVisibility(visibility) {
-        const tab = document.getElementById('s_tab'); // 图片、文库等标签
-        tab.style = `
-        visibility: ${visibility};
-        height: ${visibility === 'hidden' ? '0' : 'auto'};`;
     }
 
     // 准备双击显示背景
