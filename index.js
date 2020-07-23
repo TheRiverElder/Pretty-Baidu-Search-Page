@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.3.3
+// @version      1.3.4
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -339,6 +339,7 @@ GM_addStyle(globalStyle);
 
     // 开关导航栏
     function toggleTab() {
+        const tab = document.getElementById('s_tab'); // 图片、文库等标签
         const newVisibility = tab.style.visibility === 'hidden' ? 'visible' : 'hidden';
         setTabVisibility(newVisibility);
         GM_setValue(TV_KEY, newVisibility);
