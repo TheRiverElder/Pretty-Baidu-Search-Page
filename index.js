@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.3.2
+// @version      1.3.3
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -15,8 +15,7 @@
 // @grant        GM_setValue
 // ==/UserScript==
 
-// 嵌入css
-GM_addStyle(`
+const globalStyle = `
     html, body {
         font-family: 微软雅黑, Helvatica, sans serif;
     }
@@ -116,13 +115,6 @@ GM_addStyle(`
     .wrapper_new #head.fix-head .s_form,
     .wrapper_new .s_form {
         height: auto;
-    }
-    #wrapper {
-        backgroun-color: #001133;
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-attachment: fixed;
     }
     #s_tab {
         background: #F5F5F680;
@@ -329,7 +321,10 @@ GM_addStyle(`
         top: 48px;
         user-select: none;
     }
-`);
+`;
+
+// 嵌入css
+GM_addStyle(globalStyle);
 
 (function() {
     'use strict';
@@ -339,207 +334,221 @@ GM_addStyle(`
     // 保存先前设置的导航栏可见性的键
     const TV_KEY = 'baidu-search-tab-visibility';
 
-    // 移除冗杂内容
-    [
-        'content_right', // 右侧推荐内容
-        'rs', // 相关关键词
-        'rs_top_new', // 新的相关词
-        'super_se_tip' // 错字提示
-    ].forEach(id => {
-        const elem = document.getElementById(id);
-        if (elem && elem.remove) elem.remove();
-    });
+    // 重新进行刷新
+    function refreshContent() {
 
-    // 获取相关DOM
-    const wrapper = document.getElementById('wrapper'); // 整个页面
-    const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
-    const u = document.getElementById('u'); // 页眉处的链接
-    const tab = document.getElementById('s_tab'); // 图片、文库等标签
-    const container = document.getElementById('container'); // 主要内容：搜索结果与页码
-    const content = document.getElementById('content_left'); // 搜索结果列表
-    const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
-    const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
+        // 移除冗杂内容
+        [
+            'content_right', // 右侧推荐内容
+            'rs', // 相关关键词
+            'rs_top_new', // 新的相关词
+            'super_se_tip' // 错字提示
+        ].forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem && elem.remove) elem.remove();
+        });
 
-    // 封杀所有冗杂内容
-    [...content.childNodes].forEach(node => node.remove())
+        // const container = document.getElementById('container'); // 主要内容：搜索结果与页码
+        const content = document.getElementById('content_left'); // 搜索结果列表
+        const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
+        // const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
 
-    // 双列排布搜索结果
-    const left = Object.assign(document.createElement('div'), {className: 'result_column'});
-    const right = Object.assign(document.createElement('div'), {className: 'result_column'});
-    content.appendChild(left);
-    content.appendChild(right);
-    // 重新将实际的搜索结果分两列填充至容器
-    for (let result of results) {
-        appendResult(result);
-    }
-    
-    // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
-    function appendResult(elem) {
-        (left.clientHeight <= right.clientHeight ? left : right).appendChild(elem);
-        // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
-        elem.addEventListener('dblclick', event => event.stopPropagation());
-    }
+        // 先移除所有元素，以封杀所有冗杂内容
+        [...content.childNodes].forEach(node => node.remove())
 
-    // 双击隐藏所有元素并显示背景
-    let showBg = false;
-    container.addEventListener('dblclick', event => {
-        showBg = true;
-        [head, tab, foot, container].forEach(e => e.classList.add('hidden'));
-        event.stopPropagation();
-    });
-    // 在任意地方单击以重现元素
-    wrapper.addEventListener('click', () => {
-        if (showBg) {
-            showBg = false;
-            [head, tab, foot, container].forEach(e => e.classList.remove('hidden'));
-        }
-    });
-
-    // 监听新的结果或者广告的添加，Sky Killed 度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
-    if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver
-        const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
-            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                [...mutation.addedNodes].forEach(node => {
-                    node.remove();
-                    if (node.classList.contains('result') || node.classList.contains('result-op')) {
-                        appendResult(node);
-                    }
-                });
+        // 双列排布搜索结果
+        const left = Object.assign(document.createElement('div'), {className: 'result_column'});
+        const right = Object.assign(document.createElement('div'), {className: 'result_column'});
+        content.appendChild(left);
+        content.appendChild(right);
+        // 重新将实际的搜索结果分两列填充至容器
+        results.forEach(appendResult);
+        
+        // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
+        function appendResult(elem) {
+            const leftHeight = left.clientHeight;
+            const rightHeight = right.clientHeight;
+            if (leftHeight === rightHeight) {
+                (left.childNodes.length <= right.childNodes.length ? left : right).appendChild(elem);
+            } else {
+                (leftHeight <= leftHeight ? left : right).appendChild(elem);
             }
-        }));
-        resultListOvserver.observe(content, {childList: true});
-    } else { // 否则就使用旧的Mutation Events API
-        content.addEventListener('DOMNodeInserted', event => {
-            if (event.relatedNode === content) {
-                const target = event.target;
-                target.remove();
-                if (target.classList.contains('result') || target.classList.contains('result-op')) {
-                    appendResult(event.target);
+            // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
+            elem.addEventListener('dblclick', event => event.stopPropagation());
+        }
+
+        // 监听新的结果或者广告的添加，Sky Killed 度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
+        if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver
+            const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
+                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                    [...mutation.addedNodes].forEach(node => {
+                        node.remove();
+                        if (node.classList.contains('result') || node.classList.contains('result-op')) {
+                            appendResult(node);
+                        }
+                    });
                 }
+            }));
+            resultListOvserver.observe(content, {childList: true});
+        } else { // 否则就使用旧的Mutation Events API
+            content.addEventListener('DOMNodeInserted', event => {
+                if (event.relatedNode === content) {
+                    const target = event.target;
+                    target.remove();
+                    if (target.classList.contains('result') || target.classList.contains('result-op')) {
+                        appendResult(target);
+                    }
+                }
+            });
+        }
+
+    }
+
+    // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
+    function watchContent() {
+        // 方案一：直接在搜索新关键词点击搜索按钮时，直接刷新
+        // const btnSearch = document.getElementById('su');
+        // btnSearch.addEventListener('click', () => location.reload());
+        // 方案二：指定form元素的target直接在当前页面刷新
+        // const form = document.getElementById('form');
+        // form.target = '_self';
+        // 方案三：监听DOM改动，经过观察发现，更新DOM的时候，#wrapper_wrapper自己不会改变，而其子元素会更新
+        // 虽然该方法也可行，但是会因为未知原因导致样式失效
+        const wrapper = document.getElementById('wrapper_wrapper');
+        wrapper.addEventListener('DOMNodeInserted', event => {
+            if (event.relatedNode === wrapper && event.target.id === 'container') {
+                refreshContent();
+                GM_addStyle(globalStyle);
             }
         });
     }
 
-    // 设置页面，当前只能设置背景内容
-    // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
-    // 浮层
-    const overlay = Object.assign(document.createElement('div'), {className: 'overlay'});
-    // 主要面板
-    const settings = Object.assign(document.createElement('div'), {className: 'settings'});
-    // 标题
-    const title = Object.assign(document.createElement('p'), {className: 'title', innerText: '背景设置'});
-    // 提示
-    const hint = Object.assign(document.createElement('p'), {className: 'hint', 
-        innerText: `先选择颜色或者文件，之后点击“使用该颜色”或者“使用该图片”，
-        之后会看见文本框中的样式代码发生改变，
-        此时点击“确定”以确认更改，否则点击“取消”以返回。
-        目前URL不支持预览，但是可以使用（图片载入耗时取决于网络环境）`
-    });
-    // 背景样式预览
-    const txtBgPreview = Object.assign(document.createElement('textarea'), {className: 'bg-preview'});
-    // 颜色输入
-    const divColor = Object.assign(document.createElement('div'), {className: 'triponent'});
-    const txtColor = Object.assign(document.createElement('span'), {innerText: '使用纯色'});
-    const iptColor = Object.assign(document.createElement('input'), {type: 'color', className: 'bg-input'});
-    const btnColor = Object.assign(document.createElement('button'), {innerText: '使用该颜色'});
-    btnColor.addEventListener('click', () => txtBgPreview.innerText = iptColor.value);
-    divColor.appendChild(txtColor);
-    divColor.appendChild(iptColor);
-    divColor.appendChild(btnColor);
-    // 图片输入
-    const divFile = Object.assign(document.createElement('div'), {className: 'triponent'});
-    const txtFile = Object.assign(document.createElement('span'), {innerText: '图片'});
-    const iptFile = Object.assign(document.createElement('input'), {type: 'file', accept: 'image/*', className: 'bg-input'});
-    const btnFile = Object.assign(document.createElement('button'), {innerText: '使用该图片'});
-    // 图片预览
-    const imgFileWrapper = Object.assign(document.createElement('div'), {className: 'bg-img-preview-wrapper'});
-    const imgFile = Object.assign(document.createElement('img'), {className: 'bg-img-preview', alt: '背景预览'});
-    iptFile.addEventListener('change', () => {
-        if (!iptFile.files.length) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-            imgFile.src = reader.result;
-            imgFile.style.display = 'block';
-        };
-        reader.readAsDataURL(iptFile.files[0]);
-    });
-    btnFile.addEventListener('click', () => txtBgPreview.innerText = `url('${imgFile.src}')`); // 由于使用的是DataURL，故会产生些许卡顿
-    divFile.appendChild(txtFile);
-    divFile.appendChild(iptFile);
-    divFile.appendChild(btnFile);
-    imgFileWrapper.appendChild(imgFile);
-    // 图片URL输入
-    const divUrl = Object.assign(document.createElement('div'), {className: 'triponent'});
-    const txtUrl = Object.assign(document.createElement('span'), {innerText: '图片URL'});
-    const iptUrl = Object.assign(document.createElement('input'), {type: 'url', className: 'bg-input'});
-    const btnUrl = Object.assign(document.createElement('button'), {innerText: '使用该图片URL'});
-    divUrl.addEventListener('click', () => txtBgPreview.innerText = `url('${iptUrl.value}')`);
-    divUrl.appendChild(txtUrl);
-    divUrl.appendChild(iptUrl);
-    divUrl.appendChild(btnUrl);
+    function setupSettings() {
 
-    // 按钮
-    const divButtons = Object.assign(document.createElement('div'), {className: 'buttons'});
-    // 确认按钮
-    const btnConfirm = Object.assign(document.createElement('button'), {innerText: '确定'});
-    btnConfirm.addEventListener('click', () => {
-        overlay.style.visibility = 'collapse';
-        const bg = txtBgPreview.value;
-        setBackground(bg);
-        GM_setValue(BG_KEY, bg);
-    });
-    // 取消按钮
-    const btnCancel = Object.assign(document.createElement('button'), {innerText: '取消'});
-    btnCancel.addEventListener('click', () => {
-        overlay.style.visibility = 'collapse';
-    });
-    divButtons.appendChild(btnConfirm);
-    divButtons.appendChild(btnCancel);
+        const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
+        const u = document.getElementById('u'); // 页眉处的链接
 
-    overlay.appendChild(settings);
-    settings.appendChild(title);
-    settings.appendChild(hint);
-    settings.appendChild(txtBgPreview);
-    settings.appendChild(divColor);
-    settings.appendChild(divFile);
-    settings.appendChild(imgFileWrapper);
-    settings.appendChild(divUrl);
-    settings.appendChild(divButtons);
-    document.getElementsByTagName('body')[0].appendChild(overlay);
-    // 设置下拉菜单
-    const settingsDropdown = Object.assign(document.createElement('div'), {className: 'usermenu setting-dropdown', 
-        onmouseleave: () => settingsDropdown.style.display = 'none'
-    });
-    settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '设置背景', onclick: openSettingsPanel}));
-    settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '开关导航', onclick: toggleTab}));
-    // 在页面右上角的连接处，增加一个设置菜单的<a>标签（实际上是仅仅是按钮的功能，但是使用<a>可以保持原有样式）
-    const btnSettings = Object.assign(document.createElement('a'), {innerText: '美化设置', className: 'btn-open-settings',
-        onmouseover: () => settingsDropdown.style.display = 'block',
-    });
-    if (u.insertBefore) {
-        u.insertBefore(btnSettings, u.children[0]);
-    } else {
-        u.appendChild(btnSettings);
-    }
-    u.appendChild(settingsDropdown);
+        // 设置页面，当前只能设置背景内容
+        // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
+        // 浮层
+        const overlay = Object.assign(document.createElement('div'), {className: 'overlay'});
+        // 主要面板
+        const settings = Object.assign(document.createElement('div'), {className: 'settings'});
+        // 标题
+        const title = Object.assign(document.createElement('p'), {className: 'title', innerText: '背景设置'});
+        // 提示
+        const hint = Object.assign(document.createElement('p'), {className: 'hint', 
+            innerText: `先选择颜色或者文件，之后点击“使用该颜色”或者“使用该图片”，
+            之后会看见文本框中的样式代码发生改变，
+            此时点击“确定”以确认更改，否则点击“取消”以返回。
+            目前URL不支持预览，但是可以使用（图片载入耗时取决于网络环境）`
+        });
+        // 背景样式预览
+        const txtBgPreview = Object.assign(document.createElement('textarea'), {className: 'bg-preview'});
+        // 颜色输入
+        const divColor = Object.assign(document.createElement('div'), {className: 'triponent'});
+        const txtColor = Object.assign(document.createElement('span'), {innerText: '使用纯色'});
+        const iptColor = Object.assign(document.createElement('input'), {type: 'color', className: 'bg-input'});
+        const btnColor = Object.assign(document.createElement('button'), {innerText: '使用该颜色'});
+        btnColor.addEventListener('click', () => txtBgPreview.innerText = iptColor.value);
+        divColor.appendChild(txtColor);
+        divColor.appendChild(iptColor);
+        divColor.appendChild(btnColor);
+        // 图片输入
+        const divFile = Object.assign(document.createElement('div'), {className: 'triponent'});
+        const txtFile = Object.assign(document.createElement('span'), {innerText: '图片'});
+        const iptFile = Object.assign(document.createElement('input'), {type: 'file', accept: 'image/*', className: 'bg-input'});
+        const btnFile = Object.assign(document.createElement('button'), {innerText: '使用该图片'});
+        // 图片预览
+        const imgFileWrapper = Object.assign(document.createElement('div'), {className: 'bg-img-preview-wrapper'});
+        const imgFile = Object.assign(document.createElement('img'), {className: 'bg-img-preview', alt: '背景预览'});
+        iptFile.addEventListener('change', () => {
+            if (!iptFile.files.length) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                imgFile.src = reader.result;
+                imgFile.style.display = 'block';
+            };
+            reader.readAsDataURL(iptFile.files[0]);
+        });
+        btnFile.addEventListener('click', () => txtBgPreview.innerText = `url('${imgFile.src}')`); // 由于使用的是DataURL，故会产生些许卡顿
+        divFile.appendChild(txtFile);
+        divFile.appendChild(iptFile);
+        divFile.appendChild(btnFile);
+        imgFileWrapper.appendChild(imgFile);
+        // 图片URL输入
+        const divUrl = Object.assign(document.createElement('div'), {className: 'triponent'});
+        const txtUrl = Object.assign(document.createElement('span'), {innerText: '图片URL'});
+        const iptUrl = Object.assign(document.createElement('input'), {type: 'url', className: 'bg-input'});
+        const btnUrl = Object.assign(document.createElement('button'), {innerText: '使用该图片URL'});
+        divUrl.addEventListener('click', () => txtBgPreview.innerText = `url('${iptUrl.value}')`);
+        divUrl.appendChild(txtUrl);
+        divUrl.appendChild(iptUrl);
+        divUrl.appendChild(btnUrl);
 
-    // 打开背景设置界面
-    function openSettingsPanel() {
-        overlay.style.visibility = 'visible';
-        txtBgPreview.innerText = GM_getValue(BG_KEY, '#001133');
-    }
+        // 按钮
+        const divButtons = Object.assign(document.createElement('div'), {className: 'buttons'});
+        // 确认按钮
+        const btnConfirm = Object.assign(document.createElement('button'), {innerText: '确定'});
+        btnConfirm.addEventListener('click', () => {
+            overlay.style.visibility = 'collapse';
+            const bg = txtBgPreview.value;
+            setBackground(bg);
+            GM_setValue(BG_KEY, bg);
+        });
+        // 取消按钮
+        const btnCancel = Object.assign(document.createElement('button'), {innerText: '取消'});
+        btnCancel.addEventListener('click', () => {
+            overlay.style.visibility = 'collapse';
+        });
+        divButtons.appendChild(btnConfirm);
+        divButtons.appendChild(btnCancel);
 
-    // 开关导航栏
-    function toggleTab() {
-        const newVisibility = tab.style.visibility === 'hidden' ? 'visible' : 'hidden';
-        setTabVisibility(newVisibility);
-        GM_setValue(TV_KEY, newVisibility);
+        overlay.appendChild(settings);
+        settings.appendChild(title);
+        settings.appendChild(hint);
+        settings.appendChild(txtBgPreview);
+        settings.appendChild(divColor);
+        settings.appendChild(divFile);
+        settings.appendChild(imgFileWrapper);
+        settings.appendChild(divUrl);
+        settings.appendChild(divButtons);
+        document.getElementsByTagName('body')[0].appendChild(overlay);
+        // 设置下拉菜单
+        const settingsDropdown = Object.assign(document.createElement('div'), {className: 'usermenu setting-dropdown', 
+            onmouseleave: () => settingsDropdown.style.display = 'none'
+        });
+        settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '设置背景', onclick: openSettingsPanel}));
+        settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '开关导航', onclick: toggleTab}));
+        // 在页面右上角的连接处，增加一个设置菜单的<a>标签（实际上是仅仅是按钮的功能，但是使用<a>可以保持原有样式）
+        const btnSettings = Object.assign(document.createElement('a'), {innerText: '美化设置', className: 'btn-open-settings',
+            onmouseover: () => settingsDropdown.style.display = 'block',
+        });
+        if (u.insertBefore) {
+            u.insertBefore(btnSettings, u.children[0]);
+        } else {
+            u.appendChild(btnSettings);
+        }
+        u.appendChild(settingsDropdown);
+
+        // 打开背景设置界面
+        function openSettingsPanel() {
+            overlay.style.visibility = 'visible';
+            txtBgPreview.innerText = GM_getValue(BG_KEY, '#001133');
+        }
+
+        // 开关导航栏
+        function toggleTab() {
+            const newVisibility = tab.style.visibility === 'hidden' ? 'visible' : 'hidden';
+            setTabVisibility(newVisibility);
+            GM_setValue(TV_KEY, newVisibility);
+        }
     }
 
     // 设置背景，如果是使用DataUrl可能会导致些许卡顿
     function setBackground(bg) {
         // 由于在设置新的背景后，background-*的样式会失效，故需要重新设置
-        wrapper.style = `
+        document.body.style = `
         background: ${bg};
         background-size: cover;
         background-repeat: no-repeat;
@@ -549,13 +558,22 @@ GM_addStyle(`
 
     // 设置导航栏可见性
     function setTabVisibility(visibility) {
+        const tab = document.getElementById('s_tab'); // 图片、文库等标签
         tab.style = `
         visibility: ${visibility};
         height: ${visibility === 'hidden' ? '0' : 'auto'};`;
     }
 
     // 初始化，读取先前设置的背景与导航栏可见性
-    setBackground(GM_getValue(BG_KEY, '#001133'));
-    setTabVisibility(GM_getValue(TV_KEY, 'visibile'));
+    function initialize() {
+        refreshContent();
+        setupSettings();
+        setBackground(GM_getValue(BG_KEY, '#001133'));
+        setTabVisibility(GM_getValue(TV_KEY, 'visibile'));
+        watchContent();
+        document.body.addEventListener('dblclick', () => document.getElementById('wrapper').classList.add('hidden'));
+    }
+
+    initialize();
 
 })();
