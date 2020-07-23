@@ -306,11 +306,11 @@ const globalStyle = `
         display: none;
     }
 
-    #head, #s_tab, #foot, #container {
+    #wrapper {
         opacity: 1;
         transition: opacity 200ms;
     }
-    #head.hidden, #s_tab.hidden, #foot.hidden, #container.hidden {
+    #wrapper.hidden {
         opacity: 0;
         transition: opacity 200ms;
     }
@@ -371,7 +371,7 @@ GM_addStyle(globalStyle);
             if (leftHeight === rightHeight) {
                 (left.childNodes.length <= right.childNodes.length ? left : right).appendChild(elem);
             } else {
-                (leftHeight <= leftHeight ? left : right).appendChild(elem);
+                (leftHeight <= rightHeight ? left : right).appendChild(elem);
             }
             // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
             elem.addEventListener('dblclick', event => event.stopPropagation());
@@ -564,6 +564,13 @@ GM_addStyle(globalStyle);
         height: ${visibility === 'hidden' ? '0' : 'auto'};`;
     }
 
+    // 准备双击显示背景
+    function setupEnjoyMode() {
+        const wrapper = document.getElementById('wrapper');
+        document.body.addEventListener('dblclick', () => wrapper.classList.add('hidden'));
+        document.body.addEventListener('click', () => wrapper.classList.remove('hidden'));
+    }
+
     // 初始化，读取先前设置的背景与导航栏可见性
     function initialize() {
         refreshContent();
@@ -571,7 +578,7 @@ GM_addStyle(globalStyle);
         setBackground(GM_getValue(BG_KEY, '#001133'));
         setTabVisibility(GM_getValue(TV_KEY, 'visibile'));
         watchContent();
-        document.body.addEventListener('dblclick', () => document.getElementById('wrapper').classList.add('hidden'));
+        setupEnjoyMode();
     }
 
     initialize();
