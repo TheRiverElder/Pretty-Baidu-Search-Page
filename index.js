@@ -2,12 +2,14 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.3.4
+// @version      1.4.0
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
 // @icon         https://theriverelder.github.io/assets/river_icon_dark.ico
 // @compatible   chrome
+// @include      *//www.baidu.com/
+// @include      *//www.baidu.com/s
 // @include      *//www.baidu.com/s?*
 // @include      *//www.baidu.com/baidu?*
 // @grant        GM_addStyle
@@ -15,7 +17,7 @@
 // @grant        GM_setValue
 // ==/UserScript==
 
-const globalStyle = `
+const GLOBAL_STYLE = `
     html, body {
         font-family: 微软雅黑, Helvatica, sans serif;
     }
@@ -323,8 +325,30 @@ const globalStyle = `
     }
 `;
 
-// 嵌入css
-GM_addStyle(globalStyle);
+/**
+ * 流程：
+ * 
+ *   进入网页
+ *      ↓
+ * 检测当前页面是搜索结果还是首页
+ * ↙首页    ↘搜索结果
+ * ↓     进行环境设置，并作标记
+ * ↓         ↓
+ * ↓     进行内容美化
+ * ↘        ↙
+ * 监听#wrapper_wrapper变化
+ *      ↓
+ *     结束
+ * 
+ * 监听到变化后
+ *     ↓
+ * 检测环境设置标记
+ * ↙已标记  ↘未标记
+ * ↓     进行环境设置，并作标记
+ * ↘        ↙
+ * 重新进行内容美化
+ * 
+ */
 
 (function() {
     'use strict';
@@ -333,135 +357,50 @@ GM_addStyle(globalStyle);
     const BG_KEY = 'baidu-search-background';
     // 保存先前设置的导航栏可见性的键
     const TV_KEY = 'baidu-search-tab-visibility';
-
+    // 状态
+    const STATE = {
+        // 是否已经设置环境，例如设置页面的按钮一类
+        hasSetupEnv: false,
+    };
 
     
 
     // 开关导航栏
     function toggleTab() {
         const tab = document.getElementById('s_tab'); // 图片、文库等标签
-        const newVisibility = tab.style.visibility === 'hidden' ? 'visible' : 'hidden';
-        setTabVisibility(newVisibility);
+        const oldVisibility = GM_getValue(TV_KEY, false);
+        const newVisibility = !oldVisibility;
         GM_setValue(TV_KEY, newVisibility);
+        setTabVisibility(newVisibility);
     }
     
     // 设置导航栏可见性
     function setTabVisibility(visibility) {
         const tab = document.getElementById('s_tab'); // 图片、文库等标签
         tab.style = `
-        visibility: ${visibility};
-        height: ${visibility === 'hidden' ? '0' : 'auto'};`;
+        visibility: ${visibility ? 'visible' : 'hidden'};
+        height: ${visibility ? 'auto' : '0'};`;
     }
 
-
-    // 重新进行刷新
-    function refreshContent() {
-
-        // 移除冗杂内容
-        [
-            'content_right', // 右侧推荐内容
-            'rs', // 相关关键词
-            'rs_top_new', // 新的相关词
-            'super_se_tip' // 错字提示
-        ].forEach(id => {
-            const elem = document.getElementById(id);
-            if (elem && elem.remove) elem.remove();
-        });
-
-        // const container = document.getElementById('container'); // 主要内容：搜索结果与页码
-        const content = document.getElementById('content_left'); // 搜索结果列表
-        const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
-        // const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
-
-        // 先移除所有元素，以封杀所有冗杂内容
-        [...content.childNodes].forEach(node => node.remove())
-
-        // 双列排布搜索结果
-        const left = Object.assign(document.createElement('div'), {className: 'result_column'});
-        const right = Object.assign(document.createElement('div'), {className: 'result_column'});
-        content.appendChild(left);
-        content.appendChild(right);
-        // 重新将实际的搜索结果分两列填充至容器
-        results.forEach(appendResult);
-        
-        // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
-        function appendResult(elem) {
-            let column;
-            if (left.clientHeight === right.clientHeight) {
-                column = left.childNodes.length <= right.childNodes.length ? left : right;
-            } else {
-                column = left.clientHeight <= right.clientHeight ? left : right;
-            }
-            if (elem.classList.contains('result-op') && column.insertBefore) {
-                let firstNormalResult = column.firstChild;
-                for (let e of column.childNodes) {
-                    if (!e.classList.contains('result-op')) {
-                        firstNormalResult = e;
-                        break;
-                    }
-                }
-                column.insertBefore(elem, firstNormalResult);
-            } else {
-                column.appendChild(elem);
-            }
-            // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
-            elem.addEventListener('dblclick', event => event.stopPropagation());
-        }
-
-        // 监听新的结果或者广告的添加，Sky Killed 度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
-        if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver
-            const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
-                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                    [...mutation.addedNodes].forEach(node => {
-                        node.remove();
-                        if (node.classList.contains('result') || node.classList.contains('result-op')) {
-                            appendResult(node);
-                        }
-                    });
-                }
-            }));
-            resultListOvserver.observe(content, {childList: true});
-        } else { // 否则就使用旧的Mutation Events API
-            content.addEventListener('DOMNodeInserted', event => {
-                if (event.relatedNode === content) {
-                    const target = event.target;
-                    target.remove();
-                    if (target.classList.contains('result') || target.classList.contains('result-op')) {
-                        appendResult(target);
-                    }
-                }
-            });
-        }
-
+    // 设置背景，如果是使用DataUrl可能会导致些许卡顿
+    function setBackground(bg) {
+        // 由于在设置新的背景后，background-*的样式会失效，故需要重新设置
+        document.body.style = `
+        background: ${bg};
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-attachment: fixed;`;
     }
 
-    // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
-    function watchContent() {
-        // 方案一：直接在搜索新关键词点击搜索按钮时，直接刷新
-        // const btnSearch = document.getElementById('su');
-        // btnSearch.addEventListener('click', () => location.reload());
-        // 方案二：指定form元素的target直接在当前页面刷新
-        // const form = document.getElementById('form');
-        // form.target = '_self';
-        // 方案三：监听DOM改动，经过观察发现，更新DOM的时候，#wrapper_wrapper自己不会改变，而其子元素会更新
-        // 虽然该方法也可行，但是会因为未知原因导致样式失效
-        const wrapper = document.getElementById('wrapper_wrapper');
-        wrapper.addEventListener('DOMNodeInserted', event => {
-            if (event.relatedNode === wrapper && event.target.id === 'container') {
-                refreshContent();
-                GM_addStyle(globalStyle);
-            }
-        });
-    }
+    // 设置环境，如用于打开设置面板按钮
+    function setupEnv() {
 
-    function setupSettings() {
+        // 在页眉处添加用于打开设置面板的按钮，以及开关导航的按钮
 
-        const head = document.getElementById('head'); // 页眉：Logo、搜索框、首页链接、设置链接
         const u = document.getElementById('u'); // 页眉处的链接
 
-        
-
-        // 设置页面，当前只能设置背景内容
+        //#region 创建设置面板，当前只能设置背景内容
         // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
         // 浮层
         const overlay = Object.assign(document.createElement('div'), {className: 'overlay'});
@@ -519,7 +458,7 @@ GM_addStyle(globalStyle);
         divUrl.appendChild(iptUrl);
         divUrl.appendChild(btnUrl);
 
-        // 按钮
+        // 按钮栏
         const divButtons = Object.assign(document.createElement('div'), {className: 'buttons'});
         // 确认按钮
         const btnConfirm = Object.assign(document.createElement('button'), {innerText: '确定'});
@@ -547,7 +486,10 @@ GM_addStyle(globalStyle);
         settings.appendChild(divUrl);
         settings.appendChild(divButtons);
         document.getElementsByTagName('body')[0].appendChild(overlay);
-        // 设置下拉菜单
+
+        //#endregion
+
+        //#region 设置下拉菜单
         const settingsDropdown = Object.assign(document.createElement('div'), {className: 'usermenu setting-dropdown', 
             onmouseleave: () => settingsDropdown.style.display = 'none'
         });
@@ -563,42 +505,160 @@ GM_addStyle(globalStyle);
             u.appendChild(btnSettings);
         }
         u.appendChild(settingsDropdown);
+        //#endregion
 
         // 打开背景设置界面
         function openSettingsPanel() {
             overlay.style.visibility = 'visible';
             txtBgPreview.innerText = GM_getValue(BG_KEY, '#001133');
         }
-    }
 
-    // 设置背景，如果是使用DataUrl可能会导致些许卡顿
-    function setBackground(bg) {
-        // 由于在设置新的背景后，background-*的样式会失效，故需要重新设置
-        document.body.style = `
-        background: ${bg};
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-attachment: fixed;`;
-    }
-
-    // 准备双击显示背景
-    function setupEnjoyMode() {
+        // 双击显示背景
         const wrapper = document.getElementById('wrapper');
         document.body.addEventListener('dblclick', () => wrapper.classList.add('hidden'));
         document.body.addEventListener('click', () => wrapper.classList.remove('hidden'));
+
+        // 设置背景
+        setBackground(GM_getValue(BG_KEY, '#001133'));
+
+        // 标记
+        STATE.hasSetupEnv = true;
+    }
+
+    // 进行内容美化
+    function prettify() {
+
+        // 重新载入样式
+        reloadStyle();
+
+        // 移除冗杂内容
+        [
+            'content_right', // 右侧推荐内容
+            'rs', // 相关关键词
+            'rs_top_new', // 新的相关词
+            'super_se_tip' // 错字提示
+        ].forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem && elem.remove) elem.remove();
+        });
+
+        // const container = document.getElementById('container'); // 主要内容：搜索结果与页码
+        const content = document.getElementById('content_left'); // 搜索结果列表
+        const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
+        // const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
+
+        // 先移除所有元素，以封杀所有冗杂内容
+        [...content.childNodes].forEach(node => node.remove())
+
+        // 双列排布搜索结果
+        const left = Object.assign(document.createElement('div'), {className: 'result_column'});
+        const right = Object.assign(document.createElement('div'), {className: 'result_column'});
+        content.appendChild(left);
+        content.appendChild(right);
+        // 重新将实际的搜索结果分两列填充至容器
+        results.forEach(appendResult);
+        
+        // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
+        function appendResult(elem) {
+            let column;
+            if (left.clientHeight === right.clientHeight) {
+                column = left.childNodes.length <= right.childNodes.length ? left : right;
+            } else {
+                column = left.clientHeight <= right.clientHeight ? left : right;
+            }
+            if (elem.classList.contains('result-op') && column.insertBefore) {
+                let firstNormalResult = column.firstChild;
+                for (let e of column.childNodes) {
+                    if (!e.classList.contains('result-op')) {
+                        firstNormalResult = e;
+                        break;
+                    }
+                }
+                column.insertBefore(elem, firstNormalResult);
+            } else {
+                column.appendChild(elem);
+            }
+            // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
+            elem.addEventListener('dblclick', event => event.stopPropagation());
+        }
+
+        // 监听新的结果或者广告的添加，度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
+        if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver
+            const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
+                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                    [...mutation.addedNodes].forEach(node => {
+                        node.remove();
+                        if (node.classList.contains('result') || node.classList.contains('result-op')) {
+                            appendResult(node);
+                        }
+                    });
+                }
+            }));
+            resultListOvserver.observe(content, {childList: true});
+        } else { // 否则就使用旧的Mutation Events API
+            content.addEventListener('DOMNodeInserted', event => {
+                if (event.relatedNode === content) {
+                    const target = event.target;
+                    target.remove();
+                    if (target.classList.contains('result') || target.classList.contains('result-op')) {
+                        appendResult(target);
+                    }
+                }
+            });
+        }
+
+        // 重新设置导航
+        setTabVisibility(GM_getValue(TV_KEY, true));
+
+    }
+
+    // 监听内容的变化
+    // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
+    function watchContent() {
+        // 方案一：直接在搜索新关键词点击搜索按钮时，直接刷新
+        // const btnSearch = document.getElementById('su');
+        // btnSearch.addEventListener('click', () => location.reload());
+        // 方案二：指定form元素的target直接在当前页面刷新
+        // const form = document.getElementById('form');
+        // form.target = '_self';
+        // 方案三：监听DOM改动，经过观察发现，
+        // div#wrapper_wrapper 在首页即存在，
+        // 更新DOM的时候，#wrapper_wrapper自己不会改变，而其子元素会更新
+        // 虽然该方法也可行，但是会因为未知原因导致样式失效
+
+        // ，但是是一个空的标签，当接收到搜索结果之后，就会用内容将其填充，但是它本身不会变
+        const wrapper = document.getElementById('wrapper_wrapper');
+        wrapper.addEventListener('DOMNodeInserted', event => {
+            if (event.relatedNode === wrapper && event.target.id === 'container') {
+                if (!STATE.hasSetupEnv) {
+                    setupEnv();
+                }
+                // 重新载入样式的工作被放到了prettify()内部了
+                prettify();
+            }
+        });
     }
 
     // 初始化，读取先前设置的背景与导航栏可见性
     function initialize() {
-        refreshContent();
-        setupSettings();
-        setBackground(GM_getValue(BG_KEY, '#001133'));
-        setTabVisibility(GM_getValue(TV_KEY, 'visibile'));
+        if (isSearchResoultPage()) {
+            setupEnv();
+            prettify();
+        }
         watchContent();
-        setupEnjoyMode();
     }
 
+    // 检测当前页面是否是搜索结果页面，因为如果是在首页执行该脚本会造成排版问题
+    function isSearchResoultPage() {
+        return (window.location.search || '').indexOf('wd=') >= 0;
+    }
+
+    // 重新载入样式
+    function reloadStyle() {
+        GM_addStyle(GLOBAL_STYLE);
+    }
+
+    // 执行初始化
     initialize();
 
 })();
