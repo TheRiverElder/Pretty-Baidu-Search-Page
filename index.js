@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      1.4.0
+// @version      2.0.0
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -506,6 +506,8 @@ const GLOBAL_STYLE = `
     const STATE = {
         // 是否已经设置环境，例如设置页面的按钮一类
         hasSetupEnv: false,
+        // 是否已经处理过搜索建议的样式
+        hasSetupBdsug: false,
     };
 
 
@@ -529,6 +531,7 @@ const GLOBAL_STYLE = `
 
     // 设置环境，如用于打开设置面板按钮
     function setupEnv() {
+        
         //#region 创建设置面板，当前只能设置背景内容
         // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
         // 浮层
@@ -582,9 +585,10 @@ const GLOBAL_STYLE = `
         imgFileWrapper.appendChild(imgFile);
 
         // 图片URL输入
+        const iptUrl = make('input', {type: 'url', className: 'bg-input'});
         const divUrl = append(make('div', {className: 'triponent'}),
             make('span', {innerText: '图片URL'}),
-            make('input', {type: 'url', className: 'bg-input'}),
+            iptUrl,
             make('button', {innerText: '使用该图片URL' ,onclick: () => txtBgPreview.value = `url('${iptUrl.value}')`})
         );
 
@@ -654,6 +658,27 @@ const GLOBAL_STYLE = `
         document.body.addEventListener('click', () => wrapper.classList.remove('hidden'));
 
         setOverlay(false);
+
+        // 监听搜索建议
+        const kw = findId('kw');
+        const bdsugListener = () => {
+            console.log('aaaaaaa');
+            if (!STATE.hasSetupBdsug) {
+                const bdsug = document.querySelector("#form > div.bdsug.bdsug-new");
+                if (bdsug) {
+                    if (SETTINGS.frostedGlass) {
+                        bdsug.classList.add('frosted-glass');
+                    } else {
+                        bdsug.classList.remove('frosted-glass');
+                    }
+                    STATE.hasSetupBdsug = true;
+                    kw.removeEventListener('input', bdsugListener);
+                    kw.removeEventListener('click', bdsugListener);
+                }
+            }
+        }
+        kw.addEventListener('input', bdsugListener);
+        kw.addEventListener('click', bdsugListener);
 
         // 应用设置
         Object.assign(SETTINGS, SETTINGS);
@@ -749,6 +774,7 @@ const GLOBAL_STYLE = `
 
         // 在进行新的搜索过后，导航栏会重现，所以要重新设置导航
         SETTINGS.tabVisibility = SETTINGS.tabVisibility;
+        SETTINGS.limitWidth = SETTINGS.limitWidth;
         // 在进行新的搜索过后，浮层会消失，所以要再添加进DOM
         document.body.appendChild(overlay);
 
