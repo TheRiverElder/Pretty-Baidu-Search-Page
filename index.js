@@ -117,14 +117,24 @@ const GLOBAL_STYLE = `
     .wrapper_new .s_form {
         height: auto;
     }
-    #s_tab {
+    .wrapper_new #s_tab {
         background: #F5F5F680;
+        padding-left: 0;
+    }
+    .wrapper_new #s_tab > .s_tab_inner {
+        width: fit-content;
+        margin: auto;
+    }
+    #container > div.head_nums_cont_outer.OP_LOG > div > div.nums {
+        margin: auto;
     }
     /* 同关键词链接，例如文库、百科之类的 */
-    .wrapper_new #s_tab .s-tab-item, .wrapper_new #s_tab .s-tab-item:before {
+    .wrapper_new #s_tab .s-tab-item, 
+    .wrapper_new #s_tab .s-tab-item:before {
         transition: color 100ms;
     }
-    .wrapper_new #s_tab .s-tab-item:hover, .wrapper_new #s_tab .s-tab-item:hover:before {
+    .wrapper_new #s_tab .s-tab-item:hover, 
+    .wrapper_new #s_tab .s-tab-item:hover:before {
         color: #FFFFFF;
         transition: color 100ms;
     }
@@ -134,18 +144,20 @@ const GLOBAL_STYLE = `
         padding: 0;
         box-sizing: border-box;
     }
-    #content_left {
+    .wrapper_new #content_left {
         width: 100%;
         margin: 0;
-        padding: 0 8em;
+        padding: 1em;
         box-sizing:
         border-box;
         display: flex;
         flex-direction: row;
+        justify-content: center;
         align-items: flex-start;
     }
     .result_column {
         flex: 1;
+        flex-shrink: 1;
         min-width: unset !important;
         padding: 1em;
         box-sizing:
@@ -358,6 +370,10 @@ const GLOBAL_STYLE = `
     .close-btn:hover {
         background-color: #eee;
     }
+
+    .limit-width {
+        max-width: 42em;
+    }
 `;
 
 /**
@@ -397,6 +413,8 @@ const GLOBAL_STYLE = `
     const KEY_FG = 'baidu-search-frosted-glass';
     // 是否启用欣赏模式（缩写自hide foreground）
     const KEY_HF = 'baidu-search-hide-foreground';
+    // 是限定内容宽度（缩写自limit width）
+    const KEY_LW = 'baidu-search-limit-width';
     //#endregion
 
     // const _settings = {
@@ -464,6 +482,23 @@ const GLOBAL_STYLE = `
         // 设置欣赏模式开关
         set hideForeground(val) {
             GM_setValue(KEY_HF, !!val);
+        },
+
+        // 限定内容宽度，默认为开启
+        get limitWidth() {
+            return GM_getValue(KEY_LW, true);
+        },
+        // 设置限定内容宽度
+        set limitWidth(val) {
+            GM_setValue(KEY_LW, !!val);
+            [...document.getElementsByClassName('result_column')]
+            .filter(e => !!e).forEach(e => {
+                if (val) {
+                    e.classList.add('limit-width');
+                } else {
+                    e.classList.remove('limit-width');
+                }
+            });
         },
     };
 
@@ -580,6 +615,10 @@ const GLOBAL_STYLE = `
             append(make('div'), // 欣赏模式
                 make('input', {type: 'checkbox', checked: SETTINGS.hideForeground, onchange: e => SETTINGS.hideForeground = e.target.checked}),
                 make('span', {innerText: '启用欣赏模式'})
+            ),
+            append(make('div'), // 限定双列宽度
+                make('input', {type: 'checkbox', checked: SETTINGS.limitWidth, onchange: e => SETTINGS.limitWidth = e.target.checked}),
+                make('span', {innerText: '限定双列宽度'})
             )
         );
 
