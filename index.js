@@ -35,7 +35,6 @@ const GLOBAL_STYLE = `
         border: none;
         box-sizing: border-box;
         background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(2px);
         border-bottom-left-radius: 1.5em;
         border-bottom-right-radius: 1.5em;
         box-shadow: none;
@@ -120,7 +119,6 @@ const GLOBAL_STYLE = `
     }
     #s_tab {
         background: #F5F5F680;
-        backdrop-filter: blur(5px);
     }
     /* 同关键词链接，例如文库、百科之类的 */
     .wrapper_new #s_tab .s-tab-item, .wrapper_new #s_tab .s-tab-item:before {
@@ -148,7 +146,7 @@ const GLOBAL_STYLE = `
     }
     .result_column {
         flex: 1;
-        min-width: 1em;
+        min-width: unset !important;
         padding: 1em;
         box-sizing:
         border-box;
@@ -160,7 +158,6 @@ const GLOBAL_STYLE = `
         margin-bottom: 1em;
         box-sizing: border-box;
         background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(5px);
         border-radius: .5em;
         transition: background 100ms;
     }
@@ -211,21 +208,20 @@ const GLOBAL_STYLE = `
         align-items: center;
         z-index: 401;
         background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(2px);
         visibility: collapse;
     }
     .settings {
-        width: 50%;
+        width: 90%;
+        max-width: 64em;
         height: 90%;
-        border-radius: 1em;
+        position: relative;
+        padding: 1em 1.5em;
         background: rgba(255, 255, 255, 0.5);
-        display: flex;
-        flex-direction: column;
         justify-content: space-evenly;
-        align-items: center;
+        align-items: start;
+        overflow: auto;
     }
     .settings > * {
-        width: 80%;
         margin: .5em 0;
     }
     .settings > .title {
@@ -235,21 +231,23 @@ const GLOBAL_STYLE = `
         font-size: 2em;
         font-weight: bold;
     }
-    .settings > .hint {
+    .bg-setting > .hint {
         text-align: center;
         bord-break: break-all;
         font-size: .8em;
         color: #404040
     }
-    .settings > textarea {
+    .bg-setting > textarea {
         resize: none;
-        height: 5em;
+        width: 100%;
+        height: 8em;
         padding: 1em;
-        border-radius: 1em;
+        box-sizing: border-box;
         outline: none;
     }
-    .settings > .triponent {
+    .bg-setting > .triponent {
         height: 2em;
+        margin: 1em 0;
         box-sizing: border-box;
         border: 1px solid #808080;
         border-radius: 1em;
@@ -258,38 +256,30 @@ const GLOBAL_STYLE = `
         align-items: center;
         background: #FFFFFF;
     }
-    .settings > .triponent > * {
+    .bg-setting > .triponent > * {
         height: 100%;
         background: transparent;
     }
-    .settings > .triponent > *:first-child {
+    .bg-setting > .triponent > *:first-child {
         height: auto;
         padding: 0 2em;
     }
-    .settings > .triponent > *:nth-child(2) {
+    .bg-setting > .triponent > *:nth-child(2) {
         flex: 1;
         min-width: 1em;
         padding: 0 2em;
         box-sizing: border-box;
         border: 0;
     }
-    .settings > .triponent > button {
+    .bg-setting > .triponent > button {
         padding: 0 2em;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
     }
-    .settings .buttons {
+    .bg-setting .buttons {
         display: flex;
         flex-direction: row;
         justify-content: space-evenly;
-    }
-    .settings button {
-        margin: 0;
-        padding: .5em 2em;
-        box-sizing: border-box;
-        border: 0;
-        border-radius: 1.5em;
-        outline: none;
     }
     .bg-img-preview-wrapper {
         flex: 1;
@@ -307,6 +297,19 @@ const GLOBAL_STYLE = `
         box-sizing: border-box;
         display: none;
     }
+    .settings button {
+        margin: 0;
+        padding: .5em 2em;
+        box-sizing: border-box;
+        border: 0;
+        border-radius: 1.5em;
+        outline: none;
+        cursor: pointer;
+    }
+    .settings > .other-settings {
+        min-width: 20em;
+        margin-left: 1em;
+    }
 
     #wrapper {
         opacity: 1;
@@ -322,6 +325,38 @@ const GLOBAL_STYLE = `
         right: 200px;
         top: 48px;
         user-select: none;
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .flex-column {
+        flex-direction: column;
+    }
+
+    .flex-grow-1 {
+        flex-basis: 0;
+        flex-grow: 1;
+    }
+
+    .rounded {
+        border-radius: 0.2em;
+    }
+
+    .frosted-glass {
+        backdrop-filter: blur(5px);
+    }
+
+    .close-btn {
+        position: absolute;
+        top: 1em;
+        right: 1em;
+        cursor: pointer;
+        background-color: #ddd;
+    }
+    .close-btn:hover {
+        background-color: #eee;
     }
 `;
 
@@ -353,173 +388,236 @@ const GLOBAL_STYLE = `
 (function() {
     'use strict';
 
-    // 保存先前设置的背景的键
-    const BG_KEY = 'baidu-search-background';
-    // 保存先前设置的导航栏可见性的键
-    const TV_KEY = 'baidu-search-tab-visibility';
+    //#region 一些持久化的设置信息
+    // 保存先前设置的背景的键（缩写自background）
+    const KEY_BG = 'baidu-search-background';
+    // 保存先前设置的导航栏可见性的键（缩写自tab visibility）
+    const KEY_TV = 'baidu-search-tab-visibility';
+    // 是否启用毛玻璃（缩写自frosted glass）
+    const KEY_FG = 'baidu-search-frosted-glass';
+    // 是否启用欣赏模式（缩写自hide foreground）
+    const KEY_HF = 'baidu-search-hide-foreground';
+    //#endregion
+
+    // const _settings = {
+    //     background: null,
+    //     tabVisibility: true,
+    //     frostedGlass: true,
+    //     hideForeground: true,
+    // };
+
+    const SETTINGS = {
+        // 获得背景，默认为"#FFFFFF"
+        get background() {
+            return GM_getValue(KEY_BG, '#FFFFFF');
+        },
+        // 设置背景，如果是使用DataUrl可能会导致些许卡顿
+        set background(val) {
+            GM_setValue(KEY_BG, val);
+            // 由于在设置新的背景后，background-*的样式会失效，故需要重新设置
+            document.body.style = `
+            background: ${val};
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-attachment: fixed;`;
+        },
+
+        // 获取导航栏可见性，默认为可见
+        get tabVisibility() {
+            return GM_getValue(KEY_TV, true);
+        },
+        // 设置导航栏可见性
+        set tabVisibility(val) {
+            GM_setValue(KEY_TV, !!val);
+            const tab = findId('s_tab'); // 图片、文库等标签
+            tab.style = `
+            visibility: ${val ? 'visible' : 'hidden'};
+            height: ${val ? 'auto' : '0'};`;
+        },
+
+        // 获取毛玻璃是否开启，默认为开启
+        get frostedGlass() {
+            return GM_getValue(KEY_FG, true);
+        },
+        // 设置毛玻璃开关
+        set frostedGlass(val) {
+            GM_setValue(KEY_FG, !!val);
+            [
+                document.querySelector("#s_tab"),
+                document.querySelector("#form > div"),
+                ...document.getElementsByClassName('result'), 
+                ...document.getElementsByClassName('result-op')
+            ].filter(e => !!e).forEach(e => {
+                if (val) {
+                    e.classList.add('frosted-glass');
+                } else {
+                    e.classList.remove('frosted-glass');
+                }
+            });
+        },
+
+        // 获取欣赏模式是否开启，默认为开启
+        get hideForeground() {
+            return GM_getValue(KEY_HF, true);
+        },
+        // 设置欣赏模式开关
+        set hideForeground(val) {
+            GM_setValue(KEY_HF, !!val);
+        },
+    };
+
     // 状态
     const STATE = {
         // 是否已经设置环境，例如设置页面的按钮一类
         hasSetupEnv: false,
     };
 
-    
 
-    // 开关导航栏
-    function toggleTab() {
-        const tab = document.getElementById('s_tab'); // 图片、文库等标签
-        const oldVisibility = GM_getValue(TV_KEY, false);
-        const newVisibility = !oldVisibility;
-        GM_setValue(TV_KEY, newVisibility);
-        setTabVisibility(newVisibility);
-    }
-    
-    // 设置导航栏可见性
-    function setTabVisibility(visibility) {
-        const tab = document.getElementById('s_tab'); // 图片、文库等标签
-        tab.style = `
-        visibility: ${visibility ? 'visible' : 'hidden'};
-        height: ${visibility ? 'auto' : '0'};`;
+    // 创建DOM节点的简写
+    function make(tag, config = {}) {
+        return Object.assign(document.createElement(tag), config);
     }
 
-    // 设置背景，如果是使用DataUrl可能会导致些许卡顿
-    function setBackground(bg) {
-        // 由于在设置新的背景后，background-*的样式会失效，故需要重新设置
-        document.body.style = `
-        background: ${bg};
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-attachment: fixed;`;
+    // 根据id查找DOM节点的简写
+    function findId(id) {
+        return document.getElementById(id);
     }
+
+    // 向DOM节点添加子节点
+    function append(node, ...children) {
+        children.forEach(c => node.appendChild(c));
+        return node;
+    }
+
+    let overlay = null;
 
     // 设置环境，如用于打开设置面板按钮
     function setupEnv() {
-
-        // 在页眉处添加用于打开设置面板的按钮，以及开关导航的按钮
-
-        const u = document.getElementById('u'); // 页眉处的链接
-
         //#region 创建设置面板，当前只能设置背景内容
         // 不使用innerHTML嵌入，虽然降低了可读性，但是方便获取DOM
         // 浮层
-        const overlay = Object.assign(document.createElement('div'), {className: 'overlay'});
-        // 主要面板
-        const settings = Object.assign(document.createElement('div'), {className: 'settings'});
+        overlay = make('div', {className: 'overlay'});
+
+        function setOverlay(visibility) {
+            overlay.style.visibility = visibility ? 'visible' : 'collapse';
+        }
+
+        // 设置面板
+        const settings = make('div', {className: 'settings rounded d-flex'});
+
+        const bgSetting = make('div', {className: 'bg-setting flex-grow-1'});
         // 标题
-        const title = Object.assign(document.createElement('p'), {className: 'title', innerText: '背景设置'});
+        const title = make('h2', {className: 'title', innerText: '背景设置'});
         // 提示
-        const hint = Object.assign(document.createElement('p'), {className: 'hint', 
-            innerText: `先选择颜色或者文件，之后点击“使用该颜色”或者“使用该图片”，
-            之后会看见文本框中的样式代码发生改变，
-            此时点击“确定”以确认更改，否则点击“取消”以返回。
-            目前URL不支持预览，但是可以使用（图片载入耗时取决于网络环境）`
+        const hint = make('p', {className: 'hint', 
+            innerText: '设置背景时，先选择颜色或者文件，之后点击“使用该颜色”或者“使用该图片”，' + 
+            '之后会看见文本框中的样式代码发生改变，' + 
+            '此时点击“确定”以确认更改，否则点击“取消”以返回。' + 
+            '目前URL不支持预览，但是可以使用（图片载入耗时取决于网络环境）'
         });
         // 背景样式预览
-        const txtBgPreview = Object.assign(document.createElement('textarea'), {className: 'bg-preview'});
+        const txtBgPreview = make('textarea', {className: 'bg-preview rounded'});
         // 颜色输入
-        const divColor = Object.assign(document.createElement('div'), {className: 'triponent'});
-        const txtColor = Object.assign(document.createElement('span'), {innerText: '使用纯色'});
-        const iptColor = Object.assign(document.createElement('input'), {type: 'color', className: 'bg-input'});
-        const btnColor = Object.assign(document.createElement('button'), {innerText: '使用该颜色'});
-        btnColor.addEventListener('click', () => txtBgPreview.innerText = iptColor.value);
-        divColor.appendChild(txtColor);
-        divColor.appendChild(iptColor);
-        divColor.appendChild(btnColor);
+        const iptColor = make('input', {type: 'color', className: 'bg-input'});
+        const divColor = append(make('div', {className: 'triponent'}),
+            make('span', {innerText: '使用纯色'}),
+            iptColor,
+            make('button', {innerText: '使用该颜色', onclick: () => txtBgPreview.value = iptColor.value})
+        );
+
         // 图片输入
-        const divFile = Object.assign(document.createElement('div'), {className: 'triponent'});
-        const txtFile = Object.assign(document.createElement('span'), {innerText: '图片'});
-        const iptFile = Object.assign(document.createElement('input'), {type: 'file', accept: 'image/*', className: 'bg-input'});
-        const btnFile = Object.assign(document.createElement('button'), {innerText: '使用该图片'});
+        const divFile = append(make('div', {className: 'triponent'}),
+            make('span', {innerText: '图片'}),
+            make('input', {type: 'file', accept: 'image/*', className: 'bg-input', onchange: e => {
+                if (!e.target.files.length) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    imgFile.src = reader.result;
+                    imgFile.classList.remove('hidden');
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }}),
+            make('button', {innerText: '使用该图片', onclick: () => txtBgPreview.value = `url('${imgFile.src}')`}) // 由于使用的是DataURL，故会产生些许卡顿
+        );
+
         // 图片预览
-        const imgFileWrapper = Object.assign(document.createElement('div'), {className: 'bg-img-preview-wrapper'});
-        const imgFile = Object.assign(document.createElement('img'), {className: 'bg-img-preview', alt: '背景预览'});
-        iptFile.addEventListener('change', () => {
-            if (!iptFile.files.length) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                imgFile.src = reader.result;
-                imgFile.style.display = 'block';
-            };
-            reader.readAsDataURL(iptFile.files[0]);
-        });
-        btnFile.addEventListener('click', () => txtBgPreview.innerText = `url('${imgFile.src}')`); // 由于使用的是DataURL，故会产生些许卡顿
-        divFile.appendChild(txtFile);
-        divFile.appendChild(iptFile);
-        divFile.appendChild(btnFile);
+        const imgFileWrapper = make('div', {className: 'bg-img-preview-wrapper'});
+        const imgFile = make('img', {className: 'bg-img-preview hidden', alt: '背景预览'});
         imgFileWrapper.appendChild(imgFile);
+
         // 图片URL输入
-        const divUrl = Object.assign(document.createElement('div'), {className: 'triponent'});
-        const txtUrl = Object.assign(document.createElement('span'), {innerText: '图片URL'});
-        const iptUrl = Object.assign(document.createElement('input'), {type: 'url', className: 'bg-input'});
-        const btnUrl = Object.assign(document.createElement('button'), {innerText: '使用该图片URL'});
-        divUrl.addEventListener('click', () => txtBgPreview.innerText = `url('${iptUrl.value}')`);
-        divUrl.appendChild(txtUrl);
-        divUrl.appendChild(iptUrl);
-        divUrl.appendChild(btnUrl);
+        const divUrl = append(make('div', {className: 'triponent'}),
+            make('span', {innerText: '图片URL'}),
+            make('input', {type: 'url', className: 'bg-input'}),
+            make('button', {innerText: '使用该图片URL' ,onclick: () => txtBgPreview.value = `url('${iptUrl.value}')`})
+        );
 
         // 按钮栏
-        const divButtons = Object.assign(document.createElement('div'), {className: 'buttons'});
-        // 确认按钮
-        const btnConfirm = Object.assign(document.createElement('button'), {innerText: '确定'});
-        btnConfirm.addEventListener('click', () => {
-            overlay.style.visibility = 'collapse';
-            const bg = txtBgPreview.value;
-            setBackground(bg);
-            GM_setValue(BG_KEY, bg);
-        });
-        // 取消按钮
-        const btnCancel = Object.assign(document.createElement('button'), {innerText: '取消'});
-        btnCancel.addEventListener('click', () => {
-            overlay.style.visibility = 'collapse';
-        });
-        divButtons.appendChild(btnConfirm);
-        divButtons.appendChild(btnCancel);
+        const divButtons = append(make('div', {className: 'buttons'}),
+            // 确认按钮
+            make('button', {innerText: '选定该背景', onclick: () => {
+                setOverlay(false);
+                SETTINGS.background = txtBgPreview.value;
+            }}), 
+            // 取消按钮
+            make('button', {innerText: '取消', onclick: () => setOverlay(false)})
+        );
 
+        append(bgSetting, title, hint, txtBgPreview, divColor, divFile, imgFileWrapper, divUrl, divButtons);
+
+        // 其它设置选项
+        const otherSettings = append(make('div', {className: 'other-settings'}),
+            make('h2', {className: 'title', innerText: '其它设置'}),
+            append(make('div'), // 导航栏可见
+                make('input', {type: 'checkbox', checked: SETTINGS.tabVisibility, onchange: e => SETTINGS.tabVisibility = e.target.checked}),
+                make('span', {innerText: '导航栏可见'})
+            ),
+            append(make('div'), // 毛玻璃
+                make('input', {type: 'checkbox', checked: SETTINGS.frostedGlass, onchange: e => SETTINGS.frostedGlass = e.target.checked}),
+                make('span', {innerText: '启用毛玻璃'})
+            ),
+            append(make('div'), // 欣赏模式
+                make('input', {type: 'checkbox', checked: SETTINGS.hideForeground, onchange: e => SETTINGS.hideForeground = e.target.checked}),
+                make('span', {innerText: '启用欣赏模式'})
+            )
+        );
+
+        append(settings, bgSetting, otherSettings, make('button', {innerText: '关闭', className: 'close-btn', onclick: () => setOverlay(false)}));
         overlay.appendChild(settings);
-        settings.appendChild(title);
-        settings.appendChild(hint);
-        settings.appendChild(txtBgPreview);
-        settings.appendChild(divColor);
-        settings.appendChild(divFile);
-        settings.appendChild(imgFileWrapper);
-        settings.appendChild(divUrl);
-        settings.appendChild(divButtons);
-        document.getElementsByTagName('body')[0].appendChild(overlay);
+        document.body.appendChild(overlay);
 
         //#endregion
 
-        //#region 设置下拉菜单
-        const settingsDropdown = Object.assign(document.createElement('div'), {className: 'usermenu setting-dropdown', 
-            onmouseleave: () => settingsDropdown.style.display = 'none'
-        });
-        settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '设置背景', onclick: openSettingsPanel}));
-        settingsDropdown.appendChild(Object.assign(document.createElement('a'), {innerText: '开关导航', onclick: toggleTab}));
+        //#region 设置按钮
         // 在页面右上角的连接处，增加一个设置菜单的<a>标签（实际上是仅仅是按钮的功能，但是使用<a>可以保持原有样式）
-        const btnSettings = Object.assign(document.createElement('a'), {innerText: '美化设置', className: 'btn-open-settings',
-            onmouseover: () => settingsDropdown.style.display = 'block',
-        });
+        const btnSettings = make('a', {innerText: '美化设置', className: 'btn-open-settings', onclick: () => {
+            setOverlay(true);
+            txtBgPreview.value = SETTINGS.background;
+        }});
+        
+        // 在页眉处添加用于打开设置面板的按钮，以及开关导航的按钮
+        const u = findId('u'); // 页眉处的链接
         if (u.insertBefore) {
             u.insertBefore(btnSettings, u.children[0]);
         } else {
             u.appendChild(btnSettings);
         }
-        u.appendChild(settingsDropdown);
         //#endregion
 
-        // 打开背景设置界面
-        function openSettingsPanel() {
-            overlay.style.visibility = 'visible';
-            txtBgPreview.innerText = GM_getValue(BG_KEY, '#001133');
-        }
-
         // 双击显示背景
-        const wrapper = document.getElementById('wrapper');
-        document.body.addEventListener('dblclick', () => wrapper.classList.add('hidden'));
+        const wrapper = findId('wrapper');
+        document.body.addEventListener('dblclick', () => {
+            if (SETTINGS.hideForeground) {
+                wrapper.classList.add('hidden');
+            }
+        });
         document.body.addEventListener('click', () => wrapper.classList.remove('hidden'));
 
-        // 设置背景
-        setBackground(GM_getValue(BG_KEY, '#001133'));
+        setOverlay(false);
+
+        // 应用设置
+        Object.assign(SETTINGS, SETTINGS);
 
         // 标记
         STATE.hasSetupEnv = true;
@@ -538,21 +636,21 @@ const GLOBAL_STYLE = `
             'rs_top_new', // 新的相关词
             'super_se_tip' // 错字提示
         ].forEach(id => {
-            const elem = document.getElementById(id);
+            const elem = findId(id);
             if (elem && elem.remove) elem.remove();
         });
 
-        // const container = document.getElementById('container'); // 主要内容：搜索结果与页码
-        const content = document.getElementById('content_left'); // 搜索结果列表
+        // const container = findId('container'); // 主要内容：搜索结果与页码
+        const content = findId('content_left'); // 搜索结果列表
         const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
-        // const foot = document.getElementById('foot'); // 页脚：举报、帮助、用户反馈
+        // const foot = findId('foot'); // 页脚：举报、帮助、用户反馈
 
         // 先移除所有元素，以封杀所有冗杂内容
         [...content.childNodes].forEach(node => node.remove())
 
         // 双列排布搜索结果
-        const left = Object.assign(document.createElement('div'), {className: 'result_column'});
-        const right = Object.assign(document.createElement('div'), {className: 'result_column'});
+        const left = make('div', {className: 'result_column'});
+        const right = make('div', {className: 'result_column'});
         content.appendChild(left);
         content.appendChild(right);
         // 重新将实际的搜索结果分两列填充至容器
@@ -561,6 +659,9 @@ const GLOBAL_STYLE = `
         // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
         function appendResult(elem) {
             let column;
+            if (SETTINGS.frostedGlass) {
+                elem.classList.add('frosted-glass');
+            }
             if (left.clientHeight === right.clientHeight) {
                 column = left.childNodes.length <= right.childNodes.length ? left : right;
             } else {
@@ -607,8 +708,10 @@ const GLOBAL_STYLE = `
             });
         }
 
-        // 重新设置导航
-        setTabVisibility(GM_getValue(TV_KEY, true));
+        // 在进行新的搜索过后，导航栏会重现，所以要重新设置导航
+        SETTINGS.tabVisibility = SETTINGS.tabVisibility;
+        // 在进行新的搜索过后，浮层会消失，所以要再添加进DOM
+        document.body.appendChild(overlay);
 
     }
 
@@ -616,18 +719,18 @@ const GLOBAL_STYLE = `
     // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
     function watchContent() {
         // 方案一：直接在搜索新关键词点击搜索按钮时，直接刷新
-        // const btnSearch = document.getElementById('su');
+        // const btnSearch = findId('su');
         // btnSearch.addEventListener('click', () => location.reload());
         // 方案二：指定form元素的target直接在当前页面刷新
-        // const form = document.getElementById('form');
+        // const form = findId('form');
         // form.target = '_self';
         // 方案三：监听DOM改动，经过观察发现，
         // div#wrapper_wrapper 在首页即存在，
         // 更新DOM的时候，#wrapper_wrapper自己不会改变，而其子元素会更新
         // 虽然该方法也可行，但是会因为未知原因导致样式失效
 
-        // ，但是是一个空的标签，当接收到搜索结果之后，就会用内容将其填充，但是它本身不会变
-        const wrapper = document.getElementById('wrapper_wrapper');
+        // 但是是一个空的标签，当接收到搜索结果之后，就会用内容将其填充，但是它本身不会变
+        const wrapper = findId('wrapper_wrapper');
         wrapper.addEventListener('DOMNodeInserted', event => {
             if (event.relatedNode === wrapper && event.target.id === 'container') {
                 if (!STATE.hasSetupEnv) {
