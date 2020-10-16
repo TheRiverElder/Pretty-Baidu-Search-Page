@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      2.0.2
+// @version      2.1.0
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -431,6 +431,8 @@ const GLOBAL_STYLE = `
     const KEY_HF = 'baidu-search-hide-foreground';
     // 是限定内容宽度（缩写自limit width）
     const KEY_LW = 'baidu-search-limit-width';
+    // 守卫循环（缩写自guardian loop）
+    const KEY_GL = 'baidu-search-guardian-loop';
     //#endregion
 
     // const _settings = {
@@ -516,6 +518,25 @@ const GLOBAL_STYLE = `
                 }
             });
         },
+
+        // 守卫循环，默认为开启
+        get guardianLoop() {
+            return GM_getValue(KEY_GL, true);
+        },
+        // 设置限定内容宽度
+        set guardianLoop(val) {
+            GM_setValue(KEY_GL, !!val);
+            if (val) {
+                if (STATE.guardianLoopPid === null) {
+                    STATE.guardianLoopPid = setInterval(cleanUpNuisances, 1000);
+                }
+            } else {
+                if (STATE.guardianLoopPid !== null) {
+                    clearInterval(STATE.guardianLoopPid);
+                    STATE.guardianLoopPid = null;
+                }
+            }
+        },
     };
 
     // 状态
@@ -524,6 +545,8 @@ const GLOBAL_STYLE = `
         hasSetupEnv: false,
         // 是否已经处理过搜索建议的样式
         hasSetupBdsug: false,
+        // 守卫循环PID
+        guardianLoopPid: null,
     };
 
 
@@ -639,6 +662,10 @@ const GLOBAL_STYLE = `
             append(make('div'), // 限定双列宽度
                 make('input', {type: 'checkbox', checked: SETTINGS.limitWidth, onchange: e => SETTINGS.limitWidth = e.target.checked}),
                 make('span', {innerText: '限定双列宽度'})
+            ),
+            append(make('div'), // 守卫循环
+                make('input', {type: 'checkbox', checked: SETTINGS.guardianLoop, onchange: e => SETTINGS.guardianLoop = e.target.checked}),
+                make('span', {innerText: '开启守卫循环'})
             )
         );
 
@@ -776,14 +803,16 @@ const GLOBAL_STYLE = `
             }));
             resultListOvserver.observe(content, {childList: true});
         } else { // 否则就使用旧的Mutation Events API
-            content.addEventListener('DOMNodeInserted', event => {
-                if (event.relatedNode === content) {
+            document.body.addEventListener('DOMNodeInserted', event => {
+                console.log(event);
+                if (event.relatedNode.id === content || event.target.id === content) {
                     const target = event.target;
                     target.remove();
                     if (target.classList.contains('result') || target.classList.contains('result-op')) {
                         appendResult(target);
                     }
                 }
+                cleanUpNuisances();
             });
         }
 
@@ -820,6 +849,16 @@ const GLOBAL_STYLE = `
                 prettify();
             }
         });
+    }
+
+    // 清空一些会扰乱排版的广告
+    function cleanUpNuisances() {
+        [
+            ...document.querySelector('#content_left').childNodes,
+            ...document.querySelectorAll('*[cmatchid]'),
+        ]
+        .filter(n => !n || !n.classList || !n.classList.contains('result_column'))
+        .forEach(n => n.remove());
     }
 
     // 初始化，读取先前设置的背景与导航栏可见性
