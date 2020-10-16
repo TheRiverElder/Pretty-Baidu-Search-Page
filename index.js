@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      2.0.0
+// @version      2.0.1
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -18,6 +18,9 @@
 // ==/UserScript==
 
 const GLOBAL_STYLE = `
+    * {
+        min-width: unset !important;
+    }
     html, body {
         font-family: 微软雅黑, Helvatica, sans serif;
     }
@@ -125,6 +128,9 @@ const GLOBAL_STYLE = `
         width: fit-content;
         margin: auto;
     }
+	#container {
+		margin-left: 0 !important;
+	}
     #container > div.head_nums_cont_outer.OP_LOG > div > div.nums {
         margin: auto;
     }
@@ -138,13 +144,16 @@ const GLOBAL_STYLE = `
         color: #FFFFFF;
         transition: color 100ms;
     }
-    #container {
+    #container,
+    #container.container_new,
+    #container.container_new.sam_newgrid {
         width: 100%;
         margin: 0;
         padding: 0;
         box-sizing: border-box;
     }
-    .wrapper_new #content_left {
+    #container > #content_left,
+    #container.sam_newgrid #content_left {
         width: 100%;
         margin: 0;
         padding: 1em;
@@ -160,10 +169,13 @@ const GLOBAL_STYLE = `
         flex-shrink: 1;
         min-width: unset !important;
         padding: 1em;
-        box-sizing:
-        border-box;
+        box-sizing: border-box;
+        margin: 0;
     }
-    .result, .result-op {
+    .result_column > .new-pmd.c-containear,
+    .result_column > .result,
+    .result_column > .result-op {
+        min-width: unset;
         width: 100%;
         padding: 1em 2em;
         margin: 0;
@@ -182,6 +194,10 @@ const GLOBAL_STYLE = `
     }
     .result:last-child {
         margin-bottom: 0;
+    }
+    .result .c-span9.c-span-last,
+    .result-op .c-span9.c-span-last {
+        width: fit-content;
     }
 
     .c-border {
@@ -662,7 +678,6 @@ const GLOBAL_STYLE = `
         // 监听搜索建议
         const kw = findId('kw');
         const bdsugListener = () => {
-            console.log('aaaaaaa');
             if (!STATE.hasSetupBdsug) {
                 const bdsug = document.querySelector("#form > div.bdsug.bdsug-new");
                 if (bdsug) {
@@ -710,7 +725,7 @@ const GLOBAL_STYLE = `
         // const foot = findId('foot'); // 页脚：举报、帮助、用户反馈
 
         // 先移除所有元素，以封杀所有冗杂内容
-        [...content.childNodes].forEach(node => node.remove())
+        // [...content.childNodes].forEach(node => node.remove())
 
         // 双列排布搜索结果
         const left = make('div', {className: 'result_column'});
