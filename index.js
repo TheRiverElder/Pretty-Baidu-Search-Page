@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      2.1.0
+// @version      2.1.1
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -20,10 +20,17 @@
 const GLOBAL_STYLE = `
     * {
         min-width: unset !important;
+        max-width: 100%;
     }
     html, body {
         font-family: 微软雅黑, Helvatica, sans serif;
     }
+	textarea {
+		width: 100%!important;
+		padding: 1em!important;
+		margin: 0;
+		box-sizing: border-box;
+	}
     .s_form_wrapper {
         display: flex;
         flex-direction: row;
@@ -199,6 +206,25 @@ const GLOBAL_STYLE = `
     .result-op .c-span9.c-span-last {
         width: fit-content;
     }
+	
+	/*调整某些过于刁钻的搜索结果排版*/
+	.c-row {
+		display: flex;
+		width: 100%;
+	}
+	.c-row > div {
+		width: fit-content;
+	}
+	.c-row > div:first-child {
+		flex: 1;
+	}
+	.c-row > div.dis-relative {
+		flex: unset;
+	}
+	.c-row > div.c-span-last {
+		flex: 1;
+		width: 0!important;
+	}
 
     .c-border {
         width: auto;
