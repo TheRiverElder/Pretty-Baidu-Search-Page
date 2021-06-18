@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      2.1.1
+// @version      2.2.0
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -459,6 +459,8 @@ const GLOBAL_STYLE = `
     const KEY_LW = 'baidu-search-limit-width';
     // 守卫循环（缩写自guardian loop）
     const KEY_GL = 'baidu-search-guardian-loop';
+    // 结果列数（缩写自column count）
+    const KEY_CC = 'baidu-search-column-count';
     //#endregion
 
     // const _settings = {
@@ -562,6 +564,16 @@ const GLOBAL_STYLE = `
                     STATE.guardianLoopPid = null;
                 }
             }
+        },
+
+        // 列数，默认为2
+        get columnCount() {
+            return GM_getValue(KEY_CC, 2);
+        },
+        // 设定列数
+        set columnCount(val) {
+            GM_setValue(KEY_CC, Number(val) || 2);
+            distributeResults();
         },
     };
 
@@ -671,6 +683,7 @@ const GLOBAL_STYLE = `
         append(bgSetting, title, hint, txtBgPreview, divColor, divFile, imgFileWrapper, divUrl, divButtons);
 
         // 其它设置选项
+        let allowSetColumnCount = true;
         const otherSettings = append(make('div', {className: 'other-settings'}),
             make('h2', {className: 'title', innerText: '其它设置'}),
             append(make('div'), // 导航栏可见
@@ -692,6 +705,10 @@ const GLOBAL_STYLE = `
             append(make('div'), // 守卫循环
                 make('input', {type: 'checkbox', checked: SETTINGS.guardianLoop, onchange: e => SETTINGS.guardianLoop = e.target.checked}),
                 make('span', {innerText: '开启守卫循环'})
+            ),
+            append(make('div'), // 设置列数
+                make('input', {type: 'number', min: "1", checked: SETTINGS.columnCount, onchange: e => SETTINGS.columnCount = Number(e.target.value), style: "width: 4em" }),
+                make('span', {innerText: '设定列数'})
             )
         );
 
@@ -772,51 +789,79 @@ const GLOBAL_STYLE = `
             if (elem && elem.remove) elem.remove();
         });
 
+        distributeResults();
+
+        // 在进行新的搜索过后，导航栏会重现，所以要重新设置导航
+        SETTINGS.tabVisibility = SETTINGS.tabVisibility;
+        SETTINGS.limitWidth = SETTINGS.limitWidth;
+        // 在进行新的搜索过后，浮层会消失，所以要再添加进DOM
+        document.body.appendChild(overlay);
+
+    }
+
+    // 搜索结果，不是搜索结果（如广告、推荐、热搜等）为0，普通搜索为1，靠前搜索为2，其它重要但不是搜索结果的为-1
+    const RESULT_LEVEL_OTHER = -1;
+    const RESULT_LEVEL_NOT_RESULT = 0;
+    const RESULT_LEVEL_RESULT = 1;
+    const RESULT_LEVEL_RESULT_OP = 2;
+
+    function getResultLevel(elem) {
+        return (
+            (
+                elem.classList.contains("result") || 
+                elem.classList.contains("result-op")
+            ) && !elem.classList.contains("xpath-log")
+        );
+    }
+
+    // 将搜索结果重新分配到不同的列中
+    function distributeResults() {
         // const container = findId('container'); // 主要内容：搜索结果与页码
         const content = findId('content_left'); // 搜索结果列表
         const results = [...document.getElementsByClassName('result'), ...document.getElementsByClassName('result-op')]; // 搜索结果，一般10个，而且id分别以数字1~10命名
         // const foot = findId('foot'); // 页脚：举报、帮助、用户反馈
 
         // 先移除所有元素，以封杀所有冗杂内容
-        // [...content.childNodes].forEach(node => node.remove())
+        [...content.childNodes].forEach(node => node.remove())
 
         // 双列排布搜索结果
-        const left = make('div', {className: 'result_column'});
-        const right = make('div', {className: 'result_column'});
-        content.appendChild(left);
-        content.appendChild(right);
+        const columnCount = SETTINGS.columnCount;
+        const columns = Array.from(Array(columnCount), () => make('div', {className: 'result_column'}));
+        columns.forEach(column => content.appendChild(column));
         // 重新将实际的搜索结果分两列填充至容器
+        let currentColumnIndex = 0;
         results.forEach(appendResult);
         
         // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
         function appendResult(elem) {
-            let column;
+            // console.log(elem);
+            const resultLevel = getResultLevel(elem);
+            const column = columns[currentColumnIndex];
             if (SETTINGS.frostedGlass) {
                 elem.classList.add('frosted-glass');
             }
-            if (left.clientHeight === right.clientHeight) {
-                column = left.childNodes.length <= right.childNodes.length ? left : right;
-            } else {
-                column = left.clientHeight <= right.clientHeight ? left : right;
-            }
-            if (elem.classList.contains('result-op') && column.insertBefore) {
-                let firstNormalResult = column.firstChild;
-                for (let e of column.childNodes) {
-                    if (!e.classList.contains('result-op')) {
-                        firstNormalResult = e;
-                        break;
+            if (resultLevel > 0) {
+                if (resultLevel === 2 && column.insertBefore) {
+                    let firstNormalResult = column.firstChild;
+                    for (let e of column.childNodes) {
+                        if (!e.classList.contains('result-op')) {
+                            firstNormalResult = e;
+                            break;
+                        }
                     }
+                    column.insertBefore(elem, firstNormalResult);
+                } else {
+                    column.appendChild(elem);
                 }
-                column.insertBefore(elem, firstNormalResult);
-            } else {
-                column.appendChild(elem);
             }
             // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
             elem.addEventListener('dblclick', event => event.stopPropagation());
+            
+            currentColumnIndex = (currentColumnIndex + 1) % columnCount;
         }
 
         // 监听新的结果或者广告的添加，度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
-        if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver
+        if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver，因此这段代码很久没有更新了
             const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
                 if (mutation.addedNodes && mutation.addedNodes.length > 0) {
                     [...mutation.addedNodes].forEach(node => {
@@ -831,24 +876,24 @@ const GLOBAL_STYLE = `
         } else { // 否则就使用旧的Mutation Events API
             document.body.addEventListener('DOMNodeInserted', event => {
                 console.log(event);
-                if (event.relatedNode.id === content || event.target.id === content) {
+                if (event.relatedNode.id === content.id) {
                     const target = event.target;
-                    target.remove();
-                    if (target.classList.contains('result') || target.classList.contains('result-op')) {
-                        appendResult(target);
+                    const resultLevel = getResultLevel(target);
+                    if (resultLevel === 0) {
+                        target.remove();
+                    } else if (resultLevel > 0) {
+                        target.remove();
+                        if (target.classList.contains('result') || target.classList.contains('result-op')) {
+                            appendResult(target);
+                        }
                     }
                 }
                 cleanUpNuisances();
             });
         }
-
-        // 在进行新的搜索过后，导航栏会重现，所以要重新设置导航
-        SETTINGS.tabVisibility = SETTINGS.tabVisibility;
-        SETTINGS.limitWidth = SETTINGS.limitWidth;
-        // 在进行新的搜索过后，浮层会消失，所以要再添加进DOM
-        document.body.appendChild(overlay);
-
     }
+
+    
 
     // 监听内容的变化
     // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
