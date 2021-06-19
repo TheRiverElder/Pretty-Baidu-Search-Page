@@ -173,7 +173,7 @@ const GLOBAL_STYLE = `
     }
     .result_column {
         flex: 1;
-        flex-shrink: 1;
+        overflow: hidden !important;
         min-width: unset !important;
         padding: 1em;
         box-sizing: border-box;
@@ -191,6 +191,7 @@ const GLOBAL_STYLE = `
         background: rgba(255, 255, 255, 0.5);
         border-radius: .5em;
         transition: background 100ms;
+        overflow: hidden !important;
     }
     .result:hover, .result-op:hover {
         background: rgba(255, 255, 255, 0.9);
@@ -259,6 +260,8 @@ const GLOBAL_STYLE = `
     .c-row > div:first-child {
         height: fit-content !important;
         width: fit-content !important;
+        min-width: 10em !important;
+        flex: 0;
     }
     .c-row > div.c-span-last {
         flex: 1;
@@ -430,6 +433,18 @@ const GLOBAL_STYLE = `
 
     .limit-width {
         max-width: 42em;
+    }
+
+    /* 用于测试搜索结果长度的幽灵节点 */
+    .ghost-experiment-element {
+        z-index: -10;
+        visibility: hidden;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    body {
+        position: relative;
     }
 `;
 
@@ -787,6 +802,9 @@ const GLOBAL_STYLE = `
         STATE.hasSetupEnv = true;
     }
 
+    const ghostExperimentElement = make("div", { className: "ghost-experiment-element" });
+    document.body.appendChild(ghostExperimentElement);
+
     // 进行内容美化
     function prettify() {
 
@@ -811,6 +829,7 @@ const GLOBAL_STYLE = `
         SETTINGS.limitWidth = SETTINGS.limitWidth;
         // 在进行新的搜索过后，浮层会消失，所以要再添加进DOM
         document.body.appendChild(overlay);
+        document.body.appendChild(ghostExperimentElement);
 
     }
 
@@ -821,12 +840,11 @@ const GLOBAL_STYLE = `
     const RESULT_LEVEL_RESULT_OP = 2;
 
     function getResultLevel(elem) {
-        return (
-            (
-                elem.classList.contains("result") || 
-                elem.classList.contains("result-op")
-            ) && !elem.classList.contains("xpath-log")
-        );
+        const resultClassList = elem.classList;
+        if (!resultClassList || (elem.getAttribute("tpl") || "").startsWith("right_")) return RESULT_LEVEL_NOT_RESULT;
+        else if (resultClassList.contains("result")) return RESULT_LEVEL_RESULT;
+        else if (resultClassList.contains("result-op")) return RESULT_LEVEL_RESULT_OP;
+        else return RESULT_LEVEL_OTHER;
     }
 
     // 将搜索结果重新分配到不同的列中
@@ -837,25 +855,43 @@ const GLOBAL_STYLE = `
         // const foot = findId('foot'); // 页脚：举报、帮助、用户反馈
 
         // 先移除所有元素，以封杀所有冗杂内容
-        [...content.childNodes].forEach(node => node.remove())
+        // [...content.childNodes].forEach(node => node.remove());
+
+        // 移除先前的列
+        [...content.childNodes].filter(elem => getResultLevel(elem) < 0).forEach(node => node.remove());
 
         // 双列排布搜索结果
         const columnCount = SETTINGS.columnCount;
         const columns = Array.from(Array(columnCount), () => make('div', {className: 'result_column'}));
         columns.forEach(column => content.appendChild(column));
         // 重新将实际的搜索结果分两列填充至容器
-        let currentColumnIndex = 0;
         results.forEach(appendResult);
         
         // 添加新的搜索结果，哪怕后来的有新的结果，也能被显示，而不会打乱排版
         function appendResult(elem) {
-            // console.log(elem);
+
             const resultLevel = getResultLevel(elem);
-            const column = columns[currentColumnIndex];
+            if (resultLevel <= 0) return;
+
             if (SETTINGS.frostedGlass) {
                 elem.classList.add('frosted-glass');
             }
-            if (resultLevel > 0) {
+
+            elem.remove();
+            ghostExperimentElement.appendChild(elem);
+            setTimeout(() => {
+                const height = elem.getBoundingClientRect().height;
+                elem.remove();
+                console.log(height, elem);
+
+                console.log(columns.map(c => c.scrollHeight));
+                let column = columns[0];
+                for (let i = 1; i < columns.length; i++) {
+                    const c = columns[i];
+                    if (c.scrollHeight < column.scrollHeight) {
+                        column = c;
+                    }
+                }
                 if (resultLevel === 2 && column.insertBefore) {
                     let firstNormalResult = column.firstChild;
                     for (let e of column.childNodes) {
@@ -868,44 +904,40 @@ const GLOBAL_STYLE = `
                 } else {
                     column.appendChild(elem);
                 }
-            }
-            // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
-            elem.addEventListener('dblclick', event => event.stopPropagation());
-            
-            currentColumnIndex = (currentColumnIndex + 1) % columnCount;
+
+                // 阻止双击事件冒泡，这样只有双击没有被遮挡的背景才能隐藏元素
+                elem.addEventListener('dblclick', event => event.stopPropagation());
+                // cleanUpNuisances();
+            }, 0);
         }
 
         // 监听新的结果或者广告的添加，度娘有时候会在脚本载入后添加新的搜索结果，导致排版错乱，所以在这里通吃进入结果列表
-        if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver，因此这段代码很久没有更新了
-            const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
-                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                    [...mutation.addedNodes].forEach(node => {
-                        node.remove();
-                        if (node.classList.contains('result') || node.classList.contains('result-op')) {
-                            appendResult(node);
-                        }
-                    });
-                }
-            }));
-            resultListOvserver.observe(content, {childList: true});
-        } else { // 否则就使用旧的Mutation Events API
-            document.body.addEventListener('DOMNodeInserted', event => {
-                console.log(event);
-                if (event.relatedNode.id === content.id) {
-                    const target = event.target;
-                    const resultLevel = getResultLevel(target);
-                    if (resultLevel === 0) {
-                        target.remove();
-                    } else if (resultLevel > 0) {
-                        target.remove();
-                        if (target.classList.contains('result') || target.classList.contains('result-op')) {
-                            appendResult(target);
-                        }
-                    }
-                }
-                cleanUpNuisances();
-            });
-        }
+        // if (MutationObserver) { // 如果有MutationObserver API，吐槽：Sky Killed百度封杀了MutationObserver，因此这段代码很久没有更新了
+        //     const resultListOvserver = new MutationObserver(mutations => mutations.forEach(mutation => {
+        //         if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+        //             [...mutation.addedNodes].forEach(node => {
+        //                 node.remove();
+        //                 if (node.classList.contains('result') || node.classList.contains('result-op')) {
+        //                     appendResult(node);
+        //                 }
+        //             });
+        //         }
+        //     }));
+        //     resultListOvserver.observe(content, {childList: true});
+        // } else { // 否则就使用旧的Mutation Events API
+        //     document.body.addEventListener('DOMNodeInserted', event => {
+        //         // console.log(event);
+        //         if (event.relatedNode.id === content.id) {
+        //             const target = event.target;
+        //             const resultLevel = getResultLevel(target);
+        //             if (resultLevel === 0) {
+        //                 target.remove();
+        //             } else if (resultLevel > 0) {
+        //                 appendResult(target);
+        //             }
+        //         }
+        //     });
+        // }
     }
 
     
@@ -940,7 +972,7 @@ const GLOBAL_STYLE = `
     // 清空一些会扰乱排版的广告
     function cleanUpNuisances() {
         [
-            ...document.querySelector('#content_left').childNodes,
+            ...(document.querySelector('#content_left') || { childNodes: [] }).childNodes,
             ...document.querySelectorAll('*[cmatchid]'),
         ]
         .filter(n => !n || !n.classList || !n.classList.contains('result_column'))
