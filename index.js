@@ -251,6 +251,21 @@ const GLOBAL_STYLE = `
         display: none;
     }
 
+    /* 让带图片的搜索结果的文字，不会被图片挤到一边 */
+    .new-pmd .c-gap-top-small {
+        margin-top: 6px;
+        flex-wrap: wrap;
+    }
+    .c-row > div:first-child {
+        height: fit-content !important;
+        width: fit-content !important;
+    }
+    .c-row > div.c-span-last {
+        flex: 1;
+        min-width: 10em !important;
+    }
+
+    /* 美化设置面板 */
     .overlay {
         position: fixed;
         top: 0;
