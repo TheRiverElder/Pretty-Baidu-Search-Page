@@ -2,7 +2,7 @@
 // @name         百度搜索页面双列美化
 // @name:en      Pretty Baidu Search Page
 // @namespace    https://github.com/TheRiverElder/Pretty-Baidu-Search-Page/blob/master/index.js
-// @version      2.2.1
+// @version      2.3.0
 // @description  美化百度搜索页面，屏蔽部分广告、相关关键词、提供自定义的图片背景、毛玻璃圆角卡片、双列布局。双列布局采用紧密布局，不会出现某个搜索结果有过多空白。
 // @description:en  Prettify Baidu search page. Removed some ads, relative keywords. Offers custom image or color backgroud. Uses round corner card to display result. Densitive layout ensures no more blank in result cards.
 // @author       TheRiverElder
@@ -38,8 +38,12 @@ const GLOBAL_STYLE = `
     }
 
     /* 整个搜索栏头 */
-    #head {
-        overflow: hidden;
+    #head.absolute {
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        transition: height 0.3s ease;
     }
 
     /* 搜索建议列表外层 */
@@ -154,6 +158,11 @@ const GLOBAL_STYLE = `
     #container.sam_newgrid .hint_common_restop, #container.sam_newgrid .nums, #container.sam_newgrid #rs, #container.sam_newgrid .search_tool_conter {
         margin: auto !important;
     }
+
+    /* 搜索栏输入框宽度 
+    .wrapper_new.wrapper_s .s_ipt_wr {
+        width: 50vw;
+    }*/
 
     /* 同关键词链接，例如文库、百科之类的 */
     .wrapper_new #s_tab .s-tab-item, 
@@ -489,6 +498,8 @@ const GLOBAL_STYLE = `
     const KEY_LW = 'baidu-search-limit-width';
     // 守卫循环（缩写自guardian loop）
     const KEY_GL = 'baidu-search-guardian-loop';
+    // 滚动时隐藏搜索栏（缩写自hide head）
+    const KEY_HH = 'baidu-search-hide-head';
     // 结果列数（缩写自column count）
     const KEY_CC = 'baidu-search-column-count';
     //#endregion
@@ -551,9 +562,9 @@ const GLOBAL_STYLE = `
             });
         },
 
-        // 获取欣赏模式是否开启，默认为开启
+        // 获取欣赏模式是否开启，默认为关闭
         get hideForeground() {
-            return GM_getValue(KEY_HF, true);
+            return GM_getValue(KEY_HF, false);
         },
         // 设置欣赏模式开关
         set hideForeground(val) {
@@ -604,6 +615,18 @@ const GLOBAL_STYLE = `
         set columnCount(val) {
             GM_setValue(KEY_CC, Number(val) || 2);
             distributeResults();
+        },
+        
+        get hideHead() {
+            GM_getValue(KEY_HH, true);
+        },
+        set hideHead(val) {
+            GM_setValue(KEY_HH, val);
+            if (val) {
+                $("#head")[0].classList.add("absolute");
+            } else {
+                $("#head")[0].classList.remove("absolute");
+            }
         },
     };
 
@@ -735,6 +758,10 @@ const GLOBAL_STYLE = `
             append(make('div'), // 守卫循环
                 make('input', {type: 'checkbox', checked: SETTINGS.guardianLoop, onchange: e => SETTINGS.guardianLoop = e.target.checked}),
                 make('span', {innerText: '开启守卫循环'})
+            ),
+            append(make('div'), // 滚动隐藏搜索栏
+                make('input', {type: 'checkbox', checked: SETTINGS.hideHead, onchange: e => SETTINGS.hideHead = e.target.checked}),
+                make('span', {innerText: '滚动隐藏搜索栏'})
             ),
             append(make('div'), // 设置列数
                 make('input', {type: 'number', min: "1", value: SETTINGS.columnCount, onchange: e => SETTINGS.columnCount = Number(e.target.value), style: "width: 4em" }),
@@ -882,9 +909,9 @@ const GLOBAL_STYLE = `
             setTimeout(() => {
                 const height = elem.getBoundingClientRect().height;
                 elem.remove();
-                console.log(height, elem);
+                // console.log(height, elem);
 
-                console.log(columns.map(c => c.scrollHeight));
+                // console.log(columns.map(c => c.scrollHeight));
                 let column = columns[0];
                 for (let i = 1; i < columns.length; i++) {
                     const c = columns[i];
@@ -940,19 +967,20 @@ const GLOBAL_STYLE = `
         // }
     }
 
-    function autoHideHead() {
-        $(document).scroll(function () {
-            var scroH = $(document).scrollTop();  //滚动高度
+    // function autoHideHead() {
+    //     $(document).scroll(function (event) {
+    //         // console.log(event);
+    //         var scroH = $(document).scrollTop();  //滚动高度
 
-            if (scroH > 2) {
-                $("#head").css("height", "0");
-                //console.log("hide head!");
-            } else {
-                $("#head").css("height", "auto");
-                //console.log("show head!");
-            }
-        });
-    }
+    //         if (scroH > 2) {
+    //             $("#head").css("height", "0px");
+    //             //console.log("hide head!");
+    //         } else {
+    //             $("#head").css("height", "64px");
+    //             //console.log("show head!");
+    //         }
+    //     });
+    // }
 
     // 监听内容的变化
     // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
@@ -980,7 +1008,10 @@ const GLOBAL_STYLE = `
             }
         });
 
-        autoHideHead();
+        // 已经转为CSS实现，原因是JS实现有问题：
+        // 本应该是：向下滚动隐藏，向上滚动显示，但是scroll event无法获取是向上还是向下滚动
+        // 所以先用简单的CSS方式实现
+        // autoHideHead();
 
     }
 
