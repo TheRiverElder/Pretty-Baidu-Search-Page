@@ -618,11 +618,11 @@ const GLOBAL_STYLE = `
         },
         
         get hideHead() {
-            GM_getValue(KEY_HH, true);
+            return GM_getValue(KEY_HH, true);
         },
         set hideHead(val) {
-            GM_setValue(KEY_HH, val);
-            if (val) {
+            GM_setValue(KEY_HH, !!val);
+            if (!!val) {
                 $("#head")[0].classList.add("absolute");
             } else {
                 $("#head")[0].classList.remove("absolute");
@@ -854,9 +854,11 @@ const GLOBAL_STYLE = `
         // 在进行新的搜索过后，导航栏会重现，所以要重新设置导航
         SETTINGS.tabVisibility = SETTINGS.tabVisibility;
         SETTINGS.limitWidth = SETTINGS.limitWidth;
+        SETTINGS.hideHead = SETTINGS.hideHead;
         // 在进行新的搜索过后，浮层会消失，所以要再添加进DOM
         document.body.appendChild(overlay);
         document.body.appendChild(ghostExperimentElement);
+
 
     }
 
