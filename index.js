@@ -36,6 +36,12 @@ const GLOBAL_STYLE = `
         flex-direction: row;
         justify-content: center;
     }
+
+    /* 整个搜索栏头 */
+    #head {
+        overflow: hidden;
+    }
+
     /* 搜索建议列表外层 */
     .bdsug, 
     .wrapper_new.wrapper_s #form .bdsug-new, 
@@ -53,6 +59,7 @@ const GLOBAL_STYLE = `
     .busug input, .busug-new input, .wrapper_new .s_btn_wr .s_btn {
         border-radius: 0;
     }
+
     /* 搜索建议表 */
     .wrapper_new #form .bdsug-new ul, 
     .wrapper_new .fix-head.s_down #form .bdsug-new,
@@ -61,6 +68,7 @@ const GLOBAL_STYLE = `
         margin: 0;
         padding: 0;
     }
+
     /* 普通的搜索建议 */
     .wrapper_new.wrapper_s #form .bdsug-new ul li, 
     .wrapper_new #form .bdsug-new ul li {
@@ -71,6 +79,7 @@ const GLOBAL_STYLE = `
         box-sizing: border-box;
         transition: padding-left 100ms;
     }
+
     /* 被选中的搜索建议，注意被选中不仅仅是鼠标悬停，通过上下键所选中的也在其中 */
     .wrapper_new.wrapper_s #form .bdsug-new ul li.bdsug-s, 
     .wrapper_new #form .bdsug-new .bdsug-s {
@@ -87,13 +96,13 @@ const GLOBAL_STYLE = `
         position: relative;
         right: 0;
     }
+
     /* 搜索建议列表的反馈栏 */
     .wrapper_new .bdsug-new .bdsug-feedback-wrap {
         margin: 0;
         padding-top: 5px;
         background: #F5F5F6;
     }
-
     .bdsug-feedback-wrap {
         height: 2em;
     }
@@ -122,7 +131,6 @@ const GLOBAL_STYLE = `
     #form .s_ipt_wr.iptfocus ~ .s_btn_wr {
         border-bottom-right-radius: 0;
     }
-
     .wrapper_new #head.fix-head .s_form,
     .wrapper_new .s_form {
         height: auto;
@@ -141,6 +149,12 @@ const GLOBAL_STYLE = `
     #container > div.head_nums_cont_outer.OP_LOG > div > div.nums {
         margin: auto;
     }
+
+    /* 居中搜索工具 */
+    #container.sam_newgrid .hint_common_restop, #container.sam_newgrid .nums, #container.sam_newgrid #rs, #container.sam_newgrid .search_tool_conter {
+        margin: auto !important;
+    }
+
     /* 同关键词链接，例如文库、百科之类的 */
     .wrapper_new #s_tab .s-tab-item, 
     .wrapper_new #s_tab .s-tab-item:before {
@@ -226,13 +240,11 @@ const GLOBAL_STYLE = `
 		flex: 1;
 		width: 0!important;
 	}
-
     .c-border {
         width: auto;
         border: none;
         box-shadow: none;
     }
-
     #page, .wrapper_new .container_new~#page {
         background-color: transparent;
         padding: 0;
@@ -251,7 +263,6 @@ const GLOBAL_STYLE = `
     #page strong .fk, #page .fk {
         display: none;
     }
-
     /* 让带图片的搜索结果的文字，不会被图片挤到一边 */
     .new-pmd .c-gap-top-small {
         margin-top: 6px;
@@ -267,7 +278,6 @@ const GLOBAL_STYLE = `
         flex: 1;
         min-width: 10em !important;
     }
-
     /* 美化设置面板 */
     .overlay {
         position: fixed;
@@ -382,7 +392,6 @@ const GLOBAL_STYLE = `
         min-width: 20em;
         margin-left: 1em;
     }
-
     #wrapper {
         opacity: 1;
         transition: opacity 200ms;
@@ -391,35 +400,28 @@ const GLOBAL_STYLE = `
         opacity: 0;
         transition: opacity 200ms;
     }
-
     .setting-dropdown {
         display: none;
         right: 200px;
         top: 48px;
         user-select: none;
     }
-
     .d-flex {
         display: flex;
     }
-
     .flex-column {
         flex-direction: column;
     }
-
     .flex-grow-1 {
         flex-basis: 0;
         flex-grow: 1;
     }
-
     .rounded {
         border-radius: 0.2em;
     }
-
     .frosted-glass {
         backdrop-filter: blur(5px);
     }
-
     .close-btn {
         position: absolute;
         top: 1em;
@@ -430,11 +432,9 @@ const GLOBAL_STYLE = `
     .close-btn:hover {
         background-color: #eee;
     }
-
     .limit-width {
         max-width: 42em;
     }
-
     /* 用于测试搜索结果长度的幽灵节点 */
     .ghost-experiment-element {
         z-index: -10;
@@ -940,7 +940,19 @@ const GLOBAL_STYLE = `
         // }
     }
 
-    
+    function autoHideHead() {
+        $(document).scroll(function () {
+            var scroH = $(document).scrollTop();  //滚动高度
+
+            if (scroH > 2) {
+                $("#head").css("height", "0");
+                //console.log("hide head!");
+            } else {
+                $("#head").css("height", "auto");
+                //console.log("show head!");
+            }
+        });
+    }
 
     // 监听内容的变化
     // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
@@ -967,6 +979,9 @@ const GLOBAL_STYLE = `
                 prettify();
             }
         });
+
+        autoHideHead();
+
     }
 
     // 清空一些会扰乱排版的广告
