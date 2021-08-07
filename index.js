@@ -940,7 +940,20 @@ const GLOBAL_STYLE = `
         // }
     }
 
-    
+    function autoHideHead() {
+        $(document).scroll(function () {
+            var scroH = $(document).scrollTop();  //滚动高度
+
+            if (scroH > 2) {
+                $("#head").hide();
+                //console.log("hide head!");
+            }
+            else {
+                $("#head").show();
+                //console.log("show head!");
+            }
+        });
+    }
 
     // 监听内容的变化
     // 2020年7月22日左右，百度更新之后，在搜索页面搜索新的关键词，不会刷新页面，而是直接修改原有DOM，所以会导致样式出问题
@@ -967,6 +980,9 @@ const GLOBAL_STYLE = `
                 prettify();
             }
         });
+
+        autoHideHead();
+
     }
 
     // 清空一些会扰乱排版的广告
